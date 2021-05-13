@@ -18,6 +18,10 @@ class RandomArray(val len: Int, val bits: Int) {
     def negative : Array[Int] = {
         Array.fill(len) { 0 - r.nextInt(pow(2, bits-1).toInt) }
     }
+
+    def smallpos : Array[Int] = {
+        Array.fill(len) { r.nextInt(10) }
+    }
 }
 
 

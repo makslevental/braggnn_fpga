@@ -1,7 +1,7 @@
 package tensor
 
 import chisel3._
-import chisel3.util.{Pipe, isPow2, log2Ceil}
+import chisel3.util.{isPow2, log2Ceil}
 
 import scala.math.pow
 
@@ -132,15 +132,6 @@ class DotProduct(aBits: Int = 8, bBits: Int = 8, size: Int = 16) extends Module 
                             }
                     }
             }
-
-            //                        if (i == 0) {
-            //                            // First layer of PipeAdders
-            //                            a(i)(j).io.a := m(2 * j).io.y
-            //                            a(i)(j).io.b := m(2 * j + 1).io.y
-            //                        } else {
-            //                            a(i)(j).io.a := a(i - 1)(2 * j).io.y
-            //                            a(i)(j).io.b := a(i - 1)(2 * j + 1).io.y
-            //                        }
         }
     }
 
@@ -156,134 +147,144 @@ class DotProduct(aBits: Int = 8, bBits: Int = 8, size: Int = 16) extends Module 
 
 
 class Matrix(rows: Int, cols: Int, bitWidth: Int) extends Bundle {
-    val data: Vec[Vec[UInt]] = Input(Vec(rows, Vec(cols, UInt(bitWidth.W))))
-    val valid: Bool = Input(Bool())
+    val data: Vec[Vec[SInt]] = Vec(rows, Vec(cols, SInt(bitWidth.W)))
 }
 
 class Valid[+T <: Data](gen: T) extends Bundle {
     val valid: Bool = Output(Bool())
     val data: T = Output(gen)
+
     override def cloneType: this.type = Valid(gen).asInstanceOf[this.type]
 }
+
 object Valid {
     def apply[T <: Data](gen: T): Valid[T] = new Valid(gen)
 }
+//
+///** Perform matrix-vector-multiplication based on DotProduct */
+//class MatrixVectorMultiplication(size: Int, bitWidth: Int) extends Module {
+//    val io = IO(new Bundle {
+//        var reset = Input(Bool()) // FIXME: reset should be replaced by a load-acc instr
+//        val inp = Flipped(Valid(Vec(size, UInt(bitWidth.W))))
+//        val wgt = Flipped(Valid(new Matrix(size, size, bitWidth)))
+//        // TODO: i don't know what the point of accumulator here is?
+//        // TODO: ohhhhhh it has something to do with multiple matmuls?
+//        val acc_i = Flipped(Valid(Vec(size, UInt(bitWidth.W))))
+//        val acc_o = Valid(Vec(size, UInt(bitWidth.W)))
+//        val out = Valid(Vec(size, UInt(bitWidth.W)))
+//    })
+//
+//    val dot = Seq.fill(size)(
+//        Module(new DotProduct(aBits = bitWidth, bBits = bitWidth, size)))
+//    // Latency is defined as two in the following, because there is one cycle in the MAC module,
+//    // and another cycle in the pipelined adders as the first layer of the accumulator
+//    // TODO: why do you need a Pipe?
+//    val acc = Seq.fill(size)(Module(new Pipe(UInt(bitWidth.W), latency = 2)))
+//    val add = Seq.fill(size)(Wire(SInt(bitWidth.W)))
+//    val vld = Wire(Vec(size, Bool()))
+//
+//    for (i <- 0 until size) {
+//        acc(i).io.enq.valid := io.inp.valid & io.wgt.data.valid & io.acc_i.valid & ~io.reset
+//        // bits are actually entries i.e. row 0 entry i
+//        // acc_i is a vec of vecs of tensorElemBits
+//        acc(i).io.enq.bits := io.acc_i.data(i)
+//        for (j <- 0 until size) {
+//            dot(i).io.a(j) := io.inp.data(j).asSInt // input vector
+//            dot(i).io.b(j) := io.wgt.data.data(i)(j).asSInt
+//        }
+//        add(i) := acc(i).io.deq.bits.asSInt + dot(i).io.y
+//        io.acc_o.data(i) := Mux(io.reset, 0.U, add(i).asUInt)
+//        io.out.data(i) := add(i).asUInt
+//        vld(i) := acc(i).io.deq.valid
+//    }
+//    io.acc_o.valid := vld.asUInt.andR | io.reset
+//    io.out.valid := vld.asUInt.andR
+//}
 
-/** Perform matrix-vector-multiplication based on DotProduct */
-class MatrixVectorMultiplication(size: Int, bitWidth: Int) extends Module {
+class MatrixVectorProduct(rows: Int, cols: Int, bitWidth: Int) extends Module {
     val io = IO(new Bundle {
-        val reset = Input(Bool()) // FIXME: reset should be replaced by a load-acc instr
-        val inp = Flipped(Valid(Vec(size, UInt(bitWidth.W))))
-        val wgt = Flipped(Valid(new Matrix(size, size, bitWidth)))
-        val acc_i = Flipped(Valid(Vec(size, UInt(bitWidth.W))))
-        val acc_o = Valid(Vec(size, UInt(bitWidth.W)))
-        val out = Valid(Vec(size, UInt(bitWidth.W)))
+        val mat = Input(new Matrix(rows, cols, bitWidth))
+        val vec = Input(Vec(cols, SInt(bitWidth.W)))
+        val out = Output(Vec(rows, SInt(bitWidth.W)))
     })
 
-    val dot = Seq.fill(size)(
-        Module(new DotProduct(aBits = bitWidth, bBits = bitWidth, size)))
-    // Latency is defined as two in the following, because there is one cycle in the MAC module,
-    // and another cycle in the pipelined adders as the first layer of the accumulator
-    // TODO: why do you need a Pipe?
-    val acc = Seq.fill(size)(Module(new Pipe(UInt(bitWidth.W), latency = 2)))
-    val add = Seq.fill(size)(Wire(SInt(bitWidth.W)))
-    val vld = Wire(Vec(size, Bool()))
+    val dot = Seq.fill(rows)(
+        Module(new DotProduct(aBits = bitWidth, bBits = bitWidth, cols)))
 
-    for (i <- 0 until size) {
-        acc(i).io.enq.valid := io.wgt.valid & ~io.reset
-        // bits are actually entries i.e. row 0 entry i
-        // acc_i is a vec of vecs of tensorElemBits
-        acc(i).io.enq.bits := io.acc_i.data(i)
-        for (j <- 0 until size) {
-            dot(i).io.a(j) := io.inp.data(j).asSInt // input vector
-            dot(i).io.b(j) := io.wgt.data.data(i)(j).asSInt
+    for (i <- 0 until rows) {
+        for (j <- 0 until cols) {
+            dot(i).io.a(j) := io.mat.data(i)(j) // input vector
+            dot(i).io.b(j) := io.vec(j)
         }
-        add(i) := acc(i).io.deq.bits.asSInt + dot(i).io.y
-        io.acc_o.data(i) := Mux(io.reset, 0.U, add(i).asUInt)
-        io.out.data(i) := add(i).asUInt
-        vld(i) := acc(i).io.deq.valid
+        io.out(i) := dot(i).io.y
     }
-    io.acc_o.valid := vld.asUInt.andR | io.reset
-    io.out.valid := vld.asUInt.andR
-}
-
-/** Perform matrix-vector-multiplication based on DotProduct */
-class MatrixMatrixMultiplication(size: Int, bitWidth: Int) extends Module {
-    val io = IO(new Bundle {
-        val reset = Input(Bool()) // FIXME: reset should be replaced by a load-acc instr
-        val inp = Flipped(Valid(new Matrix(size, size, bitWidth)))
-        val wgt = Flipped(Valid(new Matrix(size, size, bitWidth)))
-        val acc_i = Flipped(Valid(new Matrix(size, size, bitWidth)))
-        val acc_o = Valid(new Matrix(size, size, bitWidth))
-        val out = Valid(new Matrix(size, size, bitWidth))
-    })
-
-    val dot = Seq.fill(size)(
-        Module(new MatrixMatrixMultiplication(size, bitWidth)))
-    // Latency is defined as two in the following, because there is one cycle in the MAC module,
-    // and another cycle in the pipelined adders as the first layer of the accumulator
-    // TODO: why do you need a Pipe?
-    val acc = Seq.fill(size)(Module(new Pipe(UInt(bitWidth.W), latency = 2)))
-    val add = Seq.fill(size)(Wire(SInt(bitWidth.W)))
-    val vld = Wire(Vec(size, Bool()))
-
-    for (i <- 0 until size) {
-        acc(i).io.enq.valid := io.wgt.valid & ~io.reset
-        // bits are actually entries i.e. row 0 entry i
-        // acc_i is a vec of vecs of tensorElemBits
-        acc(i).io.enq.bits := io.acc_i.data(i)
-        for (j <- 0 until size) {
-            dot(i).io.a(j) := io.inp.data(j).asSInt // input vector
-            dot(i).io.b(j) := io.wgt.data.data(i)(j).asSInt
-        }
-        add(i) := acc(i).io.deq.bits.asSInt + dot(i).io.y
-        io.acc_o.data(i) := Mux(io.reset, 0.U, add(i).asUInt)
-        io.out.data(i) := add(i).asUInt
-        vld(i) := acc(i).io.deq.valid
-    }
-    io.acc_o.valid := vld.asUInt.andR | io.reset
-    io.out.valid := vld.asUInt.andR
 }
 
 
-class MatrixVectorProduct(p: Parameters) extends Module {
-    val accBits = p(CoreKey).accBits
-    val size = p(CoreKey).blockOut
-    val inpBits = p(CoreKey).inpBits
-    val wgtBits = p(CoreKey).wgtBits
-    val outBits = p(CoreKey).outBits
+/** Perform (NXM)(MXR) -> (NXR) matrix-matrix-multiplication based on MatrixVectorProduct */
+class MatrixMatrixProduct(N: Int, M: Int, R: Int, bitWidth: Int) extends Module {
     val io = IO(new Bundle {
-        val reset = Input(Bool()) // FIXME: reset should be replaced by a load-acc instr
-        val inp = new TensorMasterData(tensorType = "inp", p)
-        val wgt = new TensorMasterData(tensorType = "wgt", p)
-        val acc_i = new TensorMasterData(tensorType = "acc", p)
-        val acc_o = new TensorClientData(tensorType = "acc", p)
-        val out = new TensorClientData(tensorType = "out", p)
+        // out = A * B
+        val A = Input(new Matrix(N, M, bitWidth))
+        val B = Input(new Matrix(M, R, bitWidth))
+        val out = Output(new Matrix(N, R, bitWidth))
     })
-    val dot = Seq.fill(size)(
-        Module(new DotProduct(aBits = inpBits, bBits = wgtBits, size)))
-    // Latency is defined as two in the following, because there is one cycle in the MAC module,
-    // and another cycle in the pipelined adders as the first layer of the accumulator
-    val acc = Seq.fill(size)(Module(new Pipe(UInt(accBits.W), latency = 2)))
-    val add = Seq.fill(size)(Wire(SInt(accBits.W)))
-    val vld = Wire(Vec(size, Bool()))
 
-    for (i <- 0 until size) {
-        acc(i).io.enq.valid := io.inp.data.valid & io.wgt.data.valid & io.acc_i.data.valid & ~io.reset
-        acc(i).io.enq.bits := io.acc_i.data.bits(0)(i)
-        // oh duh there's only `size` dot products
-        for (j <- 0 until size) {
-            dot(i).io.a(j) := io.inp.data.bits(0)(j).asSInt
-            dot(i).io.b(j) := io.wgt.data.bits(i)(j).asSInt
+    var matVecMul = Seq.fill(R)(
+        Module(new MatrixVectorProduct(N, M, bitWidth)))
+
+
+    for (i <- 0 until R) {
+        matVecMul(i).io.mat <> io.A
+        for (j <- 0 until M) {
+            matVecMul(i).io.vec(j) := io.B.data(j)(i)
         }
-        add(i) := acc(i).io.deq.bits.asSInt + dot(i).io.y
-        io.acc_o.data.bits(0)(i) := Mux(io.reset, 0.U, add(i).asUInt)
-        io.out.data.bits(0)(i) := add(i).asUInt
-        vld(i) := acc(i).io.deq.valid
+        for (j <- 0 until N) {
+            io.out.data(j)(i) := matVecMul(i).io.out(j)
+        }
     }
-    io.acc_o.data.valid := vld.asUInt.andR | io.reset
-    io.out.data.valid := vld.asUInt.andR
 }
+
+
+// original
+//class MatrixVectorMultiplication(p: Parameters) extends Module {
+//    val accBits = p(CoreKey).accBits
+//    val size = p(CoreKey).blockOut
+//    val inpBits = p(CoreKey).inpBits
+//    val wgtBits = p(CoreKey).wgtBits
+//    val outBits = p(CoreKey).outBits
+//    val io = IO(new Bundle {
+//        val reset = Input(Bool()) // FIXME: reset should be replaced by a load-acc instr
+//        val inp = new TensorMasterData(tensorType = "inp", p)
+//        val wgt = new TensorMasterData(tensorType = "wgt", p)
+//        val acc_i = new TensorMasterData(tensorType = "acc", p)
+//        val acc_o = new TensorClientData(tensorType = "acc", p)
+//        val out = new TensorClientData(tensorType = "out", p)
+//    })
+//    val dot = Seq.fill(size)(
+//        Module(new DotProduct(aBits = inpBits, bBits = wgtBits, size)))
+//    // Latency is defined as two in the following, because there is one cycle in the MAC module,
+//    // and another cycle in the pipelined adders as the first layer of the accumulator
+//    val acc = Seq.fill(size)(Module(new Pipe(UInt(accBits.W), latency = 2)))
+//    val add = Seq.fill(size)(Wire(SInt(accBits.W)))
+//    val vld = Wire(Vec(size, Bool()))
+//
+//    for (i <- 0 until size) {
+//        acc(i).io.enq.valid := io.inp.data.valid & io.wgt.data.valid & io.acc_i.data.valid & ~io.reset
+//        acc(i).io.enq.bits := io.acc_i.data.bits(0)(i)
+//        // oh duh there's only `size` dot products
+//        for (j <- 0 until size) {
+//            dot(i).io.a(j) := io.inp.data.bits(0)(j).asSInt
+//            dot(i).io.b(j) := io.wgt.data.bits(i)(j).asSInt
+//        }
+//        add(i) := acc(i).io.deq.bits.asSInt + dot(i).io.y
+//        io.acc_o.data.bits(0)(i) := Mux(io.reset, 0.U, add(i).asUInt)
+//        io.out.data.bits(0)(i) := add(i).asUInt
+//        vld(i) := acc(i).io.deq.valid
+//    }
+//    io.acc_o.data.valid := vld.asUInt.andR | io.reset
+//    io.out.data.valid := vld.asUInt.andR
+//}
 
 
 //

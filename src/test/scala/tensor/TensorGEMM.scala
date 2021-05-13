@@ -117,138 +117,181 @@ class DotProdSpec extends FlatSpec with ChiselScalatestTester with Matchers {
     }
 }
 
-class MatrixVectorProdSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-    behavior of "MatrixVectorMultiplication"
+class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
+    behavior of "MatrixMult"
 
+    val N = 16
+    val M = 8
+    val R = 4
+    val repeats = 5
     val vecDim = 8
-    val bitWidth = 8
+    val bitWidth = 32
 
-    def mvmRef(inp: Array[Int], wgt: Array[Array[Int]], shift: Int): Array[Int] = {
-        val size = inp.length
-        val res = Array.fill(size) {
+    def matMatMult(A: Array[Array[Int]], B: Array[Array[Int]]): Array[Array[Int]] = {
+        B.transpose.map(b => matVecMult(A, b, 0)).transpose
+    }
+
+    def matVecMult(mat: Array[Array[Int]], vec: Array[Int], shift: Int): Array[Int] = {
+        val res = Array.fill(mat.length) {
             0
         }
-        for (i <- 0 until size) {
+        for (i <- mat.indices) {
             var dot = 0
-            for (j <- 0 until size) {
-                dot += wgt(i)(j) * inp(j)
+            for (j <- mat(i).indices) {
+                dot += mat(i)(j) * vec(j)
             }
             res(i) = dot * pow(2, shift).toInt
         }
         res
     }
 
-    it should "should compute matrix product" in {
-        test(new MatrixVectorMultiplication(vecDim, bitWidth)) { c =>
-            val cycles = 5
-            for (i <- 0 until cycles) {
+    it should "should compute square matrix vector product" in {
+        test(new MatrixVectorProduct(vecDim, vecDim, bitWidth)) { c =>
+            for (_ <- 0 until repeats) {
                 // generate data based on bits
-                val inpGen = new RandomArray(vecDim, bitWidth)
-                val wgtGen = new RandomArray(vecDim, bitWidth)
-                val in_a = inpGen.positive
-                val in_b = Array.fill(vecDim) {
-                    wgtGen.positive
+                val vecGen = new RandomArray(vecDim, bitWidth)
+                val matGen = new RandomArray(vecDim, bitWidth)
+                val inVec = vecGen.smallpos
+                val inMat = Array.fill(vecDim) {
+                    matGen.smallpos
                 }
-                println("[" + in_a.mkString(",") + "]")
-                println("[")
-                in_b.foreach( arr =>
-                    println("[" + arr.mkString(",") + "],")
-                )
-                println("]")
-                val res = mvmRef(in_a, in_b, 0)
-                println("[" + res.mkString(",") + "]")
-                println()
-                val inpMask = helper.getMask(bitWidth)
-                val wgtMask = helper.getMask(bitWidth)
-                val accMask = helper.getMask(bitWidth)
+                val res = matVecMult(inMat, inVec, 0)
 
                 for (i <- 0 until vecDim) {
-                    c.io.inp.data(i).poke((in_a(i) & inpMask).U)
-                    c.io.acc_i.data(i).poke(0.U)
+                    c.io.vec(i).poke(inVec(i).S)
                     for (j <- 0 until vecDim) {
-                        c.io.wgt.data.data(i)(j).poke((in_b(i)(j) & wgtMask).U)
+                        c.io.mat.data(i)(j).poke(inMat(i)(j).S)
                     }
                 }
-
-                c.io.reset.poke(false.B)
-
-                c.io.inp.valid.poke(true.B)
-                c.io.wgt.data.valid.poke(true.B)
-                c.io.acc_i.valid.poke(true.B)
 
                 c.clock.step(1)
+                c.clock.step(1)
 
-                c.io.inp.valid.poke(false.B)
-                c.io.wgt.data.valid.poke(false.B)
-                c.io.acc_i.valid.poke(false.B)
-
-                // wait for valid signal
-                var i = 0;
-                while (c.io.acc_o.valid.peek() === false) {
-                    i += 1
-                    println(i)
-                    c.clock.step(1) // advance clock
-                }
-                if (c.io.acc_o.valid.peek() === true) {
-                    for (i <- 0 until vecDim) {
-                        c.io.acc_o.data(i).expect((res(i) & accMask).asUInt())
-                    }
+                for (i <- 0 until vecDim) {
+                    c.io.out(i).expect(res(i).asSInt())
                 }
             }
         }
     }
 
+    it should "should compute square matrix matrix product" in {
+        test(new MatrixMatrixProduct(N, N, N, bitWidth)) { c =>
+            for (_ <- 0 until repeats) {
+                // generate data based on bits
+                val AGen = new RandomArray(N, bitWidth)
+                val BGen = new RandomArray(N, bitWidth)
+                val inA = Array.fill(N) {
+                    AGen.smallpos
+                }
+                val inB = Array.fill(N) {
+                    BGen.smallpos
+                }
+                val res = matMatMult(inA, inB)
 
-    //    it should "should compute matrix product" in {
-    //        test(new MatrixVectorMultiplication()) { c =>
-    //            val cycles = 5
-    //            for (i <- 0 until cycles) {
-    //                // generate data based on bits
-    //                val inpGen = new RandomArray(c.size, c.inpBits)
-    //                val wgtGen = new RandomArray(c.size, c.wgtBits)
-    //                val in_a = inpGen.any
-    //                val in_b = Array.fill(c.size) {
-    //                    wgtGen.any
-    //                }
-    //                val res = mvmRef(in_a, in_b, 0)
-    //                println("[" + res.mkString(",") + "]")
-    //                val inpMask = helper.getMask(c.inpBits)
-    //                val wgtMask = helper.getMask(c.wgtBits)
-    //                val accMask = helper.getMask(c.accBits)
-    //
-    //                for (i <- 0 until c.size) {
-    //                    c.io.inp.data.bits(0)(i).poke((in_a(i) & inpMask).U)
-    //                    c.io.acc_i.data.bits(0)(i).poke(0.U)
-    //                    for (j <- 0 until c.size) {
-    //                        c.io.wgt.data.bits(i)(j).poke((in_b(i)(j) & wgtMask).U)
-    //                    }
-    //                }
-    //
-    //                c.io.reset.poke(false.B)
-    //
-    //                c.io.inp.data.valid.poke(true.B)
-    //                c.io.wgt.data.valid.poke(true.B)
-    //                c.io.acc_i.data.valid.poke(true.B)
-    //
-    //                c.clock.step(1)
-    //
-    //                c.io.inp.data.valid.poke(false.B)
-    //                c.io.wgt.data.valid.poke(false.B)
-    //                c.io.acc_i.data.valid.poke(false.B)
-    //
-    //                // wait for valid signal
-    //                var i = 0;
-    //                while (c.io.acc_o.data.valid.peek() === false) {
-    //                    i += 1
-    //                    println(i)
-    //                    c.clock.step(1) // advance clock
-    //                }
-    //                if (c.io.acc_o.data.valid.peek() === true) {
-    //                    for (i <- 0 until c.size) {
-    //                        c.io.acc_o.data.bits(0)(i).expect((res(i) & accMask).asUInt())
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
+//                println(s"A: ${inA.deep}".replace("Array(", "\n[").replace(")", "]"))
+//                println(s"B: ${inB.deep}".replace("Array(", "\n[").replace(")", "]"))
+//                println(s"C: ${res.deep}".replace("Array(", "\n[").replace(")", "]"))
+
+                for (i <- 0 until N) {
+                    for (j <- 0 until N) {
+                        c.io.A.data(i)(j).poke(inA(i)(j).S)
+                        c.io.B.data(i)(j).poke(inB(i)(j).S)
+                    }
+                }
+
+                println()
+                c.clock.step(1)
+                c.clock.step(1)
+
+                for (i <- 0 until N) {
+                    for (j <- 0 until N) {
+                        c.io.out.data(i)(j).expect(res(i)(j).S)
+                        //                        print(s"${c.io.out.data(i)(j).peek().litValue()}, ")
+                    }
+                    println()
+                }
+            }
+        }
+    }
+
+    it should "should compute non-square matrix vector product" in {
+        test(new MatrixVectorProduct(M, R, bitWidth)) { c =>
+            for (_ <- 0 until repeats) {
+                // generate data based on bits
+                val vecGen = new RandomArray(R, bitWidth)
+                val matGen = new RandomArray(R, bitWidth)
+                val inVec = vecGen.smallpos
+                val inMat = Array.fill(M) {
+                    matGen.smallpos
+                }
+                val res = matVecMult(inMat, inVec, 0)
+
+//                println(s"Mat: ${inMat.deep}".replace("Array(", "\n[").replace(")", "]"))
+//                println(s"Vec: ${inVec.deep}".replace("Array(", "\n[").replace(")", "]"))
+//                println(s"res: ${res.deep}".replace("Array(", "\n[").replace(")", "]"))
+
+                for (i <- 0 until M) {
+                    for (j <- 0 until R) {
+                        c.io.mat.data(i)(j).poke(inMat(i)(j).S)
+                    }
+                }
+
+                for (i <- 0 until R) {
+                    c.io.vec(i).poke(inVec(i).S)
+                }
+
+                c.clock.step(1)
+                c.clock.step(1)
+
+                for (i <- 0 until R) {
+                    c.io.out(i).expect(res(i).asSInt())
+                }
+            }
+        }
+    }
+
+    it should "should compute non-square matrix matrix product" in {
+        test(new MatrixMatrixProduct(N, M, R, bitWidth)) { c =>
+            for (_ <- 0 until repeats) {
+                // generate data based on bits
+                val AGen = new RandomArray(M, bitWidth)
+                val BGen = new RandomArray(R, bitWidth)
+                val inA = Array.fill(N) {
+                    AGen.smallpos
+                }
+                val inB = Array.fill(M) {
+                    BGen.smallpos
+                }
+                val res = matMatMult(inA, inB)
+
+//                println(s"A: ${inA.deep}".replace("Array(", "\n[").replace(")", "]"))
+//                println(s"B: ${inB.deep}".replace("Array(", "\n[").replace(")", "]"))
+//                println(s"C: ${res.deep}".replace("Array(", "\n[").replace(")", "]"))
+
+                for (i <- 0 until N) {
+                    for (j <- 0 until M) {
+                        c.io.A.data(i)(j).poke(inA(i)(j).S)
+                    }
+                }
+
+                for (i <- 0 until M) {
+                    for (j <- 0 until R) {
+                        c.io.B.data(i)(j).poke(inB(i)(j).S)
+                    }
+                }
+
+                println()
+                c.clock.step(1)
+                c.clock.step(1)
+
+                for (i <- 0 until N) {
+                    for (j <- 0 until R) {
+                        c.io.out.data(i)(j).expect(res(i)(j).S)
+                        //                        print(s"${c.io.out.data(i)(j).peek().litValue()}, ")
+                    }
+                    //                    println()
+                }
+            }
+        }
+    }
 }
