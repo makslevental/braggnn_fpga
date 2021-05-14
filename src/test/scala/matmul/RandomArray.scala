@@ -1,4 +1,4 @@
-package tensor
+package matmul
 
 import scala.util.Random
 import scala.math.pow

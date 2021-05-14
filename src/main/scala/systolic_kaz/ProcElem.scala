@@ -1,4 +1,4 @@
-package systolic_matmul
+package systolic_kaz
 
 import chisel3._
 
