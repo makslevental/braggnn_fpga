@@ -13,26 +13,25 @@ class DotProdSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 
     val rand = new scala.util.Random(1)
     val elements = 8
-
-    val aBits = 8
-    val bBits: Int = 8
-
+    val bitWidth = 8
+    val repeats = 5
     def dotProduct(vec1: List[Int], vec2: List[Int]): Int = vec1.zip(vec2).map { case (a, b) => a * b }.sum
 
     it should "should compute dot product" in {
-        test(new DotProduct(aBits, bBits, elements)) { c =>
-            val vec1 = List.fill(elements)(rand.nextInt(20) + 1)
-            val vec2 = List.fill(elements)(rand.nextInt(20) + 1)
-            val dotProd = dotProduct(vec1, vec2)
+        test(new DotProduct(bitWidth, elements)) { c =>
+            for (_ <- 0 until repeats) {
+                val vec1 = List.fill(elements)(rand.nextInt(50) + 1)
+                val vec2 = List.fill(elements)(rand.nextInt(50) + 1)
+                val dotProd = dotProduct(vec1, vec2)
 
-            vec1.zip(vec2).zipWithIndex.foreach { case ((a, b), i) =>
-                c.io.a(i).poke(a.S)
-                c.io.b(i).poke(b.S)
+                vec1.zip(vec2).zipWithIndex.foreach { case ((a, b), i) =>
+                    c.io.a(i).poke(a.S)
+                    c.io.b(i).poke(b.S)
+                }
+                c.clock.step(1)
+                c.clock.step(1)
+                c.io.y.expect(dotProd.S)
             }
-            // TODO: why two cycles?
-            c.clock.step(1)
-            c.clock.step(1)
-            c.io.y.expect(dotProd.S)
         }
     }
 }

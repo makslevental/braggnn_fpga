@@ -3,82 +3,29 @@ package matmul
 import chisel3._
 import chisel3.util.{isPow2, log2Ceil}
 
-import scala.math.pow
 
 /** Pipelined DotProduct based on MAC and PipeAdder */
-class DotProduct(aBits: Int = 8, bBits: Int = 8, size: Int = 16) extends Module {
+class DotProduct(bitWidth: Int = 8, size: Int = 16) extends Module {
     val errorMsg =
         s"\n\n[VTA] [DotProduct] size must be greater than 4 and a power of 2\n\n"
     require(size >= 2 && isPow2(size), errorMsg)
 
-    val b = aBits + bBits
-    val outBits = b + log2Ceil(size) + 1
+    val macs = Seq.fill(size)(Module(new MAC(bitWidth, cBits = 1))) // # of total vector pairs
+    val summer = Module(new LogSum(macs.head.outBits + log2Ceil(size) + 1, size))
     val io = IO(new Bundle {
-        val a = Input(Vec(size, SInt(aBits.W)))
-        val b = Input(Vec(size, SInt(bBits.W)))
-        val y = Output(SInt(outBits.W))
+        val a = Input(Vec(size, SInt(bitWidth.W)))
+        val b = Input(Vec(size, SInt(bitWidth.W)))
+        val y = Output(SInt(summer.outBits.W))
     })
-    val s = Seq.tabulate(log2Ceil(size + 1))(i =>
-        pow(2, log2Ceil(size) - i).toInt) // # of total layers
-    val p = log2Ceil(size / 2) + 1 // # of adder layers
-    val m = Seq.fill(s(0))(Module(new MAC(aBits, bBits, cBits = 1))) // # of total vector pairs
-    val a: Seq[Seq[Either[PipeAdder, Adder]]] = Seq.tabulate(p)(
-        i =>
-            Seq.fill(s(i + 1))(
-                if (i == 0)
-                    Left(Module(new PipeAdder(aBits = b + i + 1, bBits = b + i + 1)))
-                else
-                    Right(Module(new Adder(aBits = b + i + 1, bBits = b + i + 1))))) // # adders within each layer
-
     // Vector MACs
-    for (i <- 0 until s(0)) {
-        m(i).io.a := io.a(i)
-        m(i).io.b := io.b(i)
-        m(i).io.c := 0.S
-    }
+    for (i <- 0 until size) {
+        macs(i).io.a := io.a(i)
+        macs(i).io.b := io.b(i)
+        macs(i).io.c := 0.S
 
-    // PipeAdder Reduction
-    for (i <- 0 until p) {
-        for (j <- 0 until s(i + 1)) {
-            // this is so stupid
-            // all because of this depr https://github.com/freechipsproject/chisel3/pull/1550
-            a(i)(j) match {
-                case Left(pipeAdder: PipeAdder) =>
-                    pipeAdder.io.a := m(2 * j).io.y
-                    pipeAdder.io.b := m(2 * j + 1).io.y
-                case Right(adder) =>
-                    a(i - 1)(2 * j) match {
-                        case Left(twojadder: PipeAdder) =>
-                            a(i - 1)(2 * j + 1) match {
-                                case Left(twojadderp1: PipeAdder) =>
-                                    adder.io.a := twojadder.io.y
-                                    adder.io.b := twojadderp1.io.y
-                                case Right(twojadderp1: Adder) =>
-                                    adder.io.a := twojadder.io.y
-                                    adder.io.b := twojadderp1.io.y
-                            }
-                        case Right(twojadder: Adder) =>
-                            a(i - 1)(2 * j + 1) match {
-                                case Left(twojadderp1: PipeAdder) =>
-                                    adder.io.a := twojadder.io.y
-                                    adder.io.b := twojadderp1.io.y
-                                case Right(twojadderp1: Adder) =>
-                                    adder.io.a := twojadder.io.y
-                                    adder.io.b := twojadderp1.io.y
-                            }
-                    }
-            }
-        }
+        summer.io.inVec(i) := macs(i).io.y
     }
-
-    // last adder
-    a(p - 1)(0) match {
-        case Left(adder) =>
-            // this should not be possible
-            io.y := adder.io.y
-        case Right(adder) =>
-            io.y := adder.io.y
-    }
+    io.y := summer.io.y
 }
 
 
@@ -105,7 +52,7 @@ class MatrixVectorProduct(rows: Int, cols: Int, bitWidth: Int) extends Module {
     })
 
     val dot = Seq.fill(rows)(
-        Module(new DotProduct(aBits = bitWidth, bBits = bitWidth, cols)))
+        Module(new DotProduct(bitWidth, cols)))
 
     for (i <- 0 until rows) {
         for (j <- 0 until cols) {
