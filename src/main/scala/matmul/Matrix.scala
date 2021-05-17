@@ -11,11 +11,12 @@ class DotProduct(bitWidth: Int = 8, size: Int = 16) extends Module {
     require(size >= 2 && isPow2(size), errorMsg)
 
     val macs = Seq.fill(size)(Module(new MAC(bitWidth, cBits = 1))) // # of total vector pairs
-    val summer = Module(new LogSum(macs.head.outBits + log2Ceil(size) + 1, size))
+    val summer = Module(new LogSum(macs.head.outBits, size))
+    val outBits = summer.outBits
     val io = IO(new Bundle {
         val a = Input(Vec(size, SInt(bitWidth.W)))
         val b = Input(Vec(size, SInt(bitWidth.W)))
-        val y = Output(SInt(summer.outBits.W))
+        val y = Output(SInt(outBits.W))
     })
     // Vector MACs
     for (i <- 0 until size) {
@@ -44,6 +45,7 @@ object Valid {
     def apply[T <: Data](gen: T): Valid[T] = new Valid(gen)
 }
 
+// TODO: output width is wrong (will overflow)
 class MatrixVectorProduct(rows: Int, cols: Int, bitWidth: Int) extends Module {
     val io = IO(new Bundle {
         val mat = Input(new Matrix(rows, cols, bitWidth))
@@ -88,6 +90,26 @@ class MatrixMatrixProduct(N: Int, M: Int, R: Int, bitWidth: Int) extends Module 
     }
 }
 
+class FrobeniusInnerProduct(rows: Int, cols: Int, bitWidth: Int) extends Module {
+    val dot: Seq[DotProduct] = Seq.fill(rows)(
+        Module(new DotProduct(bitWidth, cols)))
+    val summer: LogSum = Module(new LogSum(dot.head.outBits, rows))
+
+    val io = IO(new Bundle {
+        val A = Input(new Matrix(rows, cols, bitWidth))
+        val B = Input(new Matrix(rows, cols, bitWidth))
+        val y = Output(SInt(summer.outBits.W))
+    })
+
+    for (i <- 0 until rows) {
+        for (j <- 0 until cols) {
+            dot(i).io.a(j) := io.A.data(i)(j)
+            dot(i).io.b(j) := io.B.data(i)(j)
+        }
+        summer.io.inVec(i) := dot(i).io.y
+    }
+    io.y := summer.io.y
+}
 
 //
 ///** Perform matrix-vector-multiplication based on DotProduct */

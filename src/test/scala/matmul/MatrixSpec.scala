@@ -30,6 +30,11 @@ class DotProdSpec extends FlatSpec with ChiselScalatestTester with Matchers {
                 }
                 c.clock.step(1)
                 c.clock.step(1)
+
+                for (i <- 0 until elements) {
+                    println(c.io.y.peek())
+                }
+
                 c.io.y.expect(dotProd.S)
             }
         }
@@ -210,6 +215,39 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
                     }
                     //                    println()
                 }
+            }
+        }
+    }
+}
+
+class FrobeniusInnerProductSpec extends FlatSpec with ChiselScalatestTester with Matchers {
+    behavior of "FrobeniusInnerProduct"
+
+    val rand = new scala.util.Random(1)
+    val elements = 4
+    val bitWidth = 8
+    val repeats = 5
+    def dotProduct(vec1: List[Int], vec2: List[Int]): Int = vec1.zip(vec2).map { case (a, b) => a * b }.sum
+    def frobProduct(mat1: List[List[Int]], mat2: List[List[Int]]): Int = mat1.zip(mat2).map { case (a, b) => dotProduct(a, b) }.sum
+
+    it should "should compute frob product" in {
+        test(new FrobeniusInnerProduct(elements, elements, bitWidth)) { c =>
+            for (_ <- 0 until repeats) {
+                val mat1 = List.fill(elements)(List.fill(elements)(rand.nextInt(20) + 1))
+                val mat2 = List.fill(elements)(List.fill(elements)(rand.nextInt(20) + 1))
+                val frobProd = frobProduct(mat1, mat2)
+
+                mat1.zip(mat2).zipWithIndex.foreach { case ((vec1, vec2), i) =>
+                    vec1.zip(vec2).zipWithIndex.foreach { case ((a, b), j) =>
+                        c.io.A.data(i)(j).poke(a.S)
+                        c.io.B.data(i)(j).poke(b.S)
+                    }
+                }
+                c.clock.step(1)
+                c.clock.step(1)
+                c.clock.step(1)
+                c.clock.step(1)
+                c.io.y.expect(frobProd.S)
             }
         }
     }
