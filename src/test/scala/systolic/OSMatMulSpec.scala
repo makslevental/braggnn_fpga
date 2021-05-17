@@ -1,6 +1,6 @@
 package systolic
 
-import Util.{RandomArray, matMatMult, printArray}
+import Util.{RandomArray, matMatMult}
 import chisel3._
 import chiseltest._
 import org.scalatest._
@@ -27,12 +27,12 @@ class OSMatMulSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         val padding = N - 1
         val delayedA = inA.zipWithIndex.map {
           case (row, index) =>
-            Array.fill(index)(0) ++ row ++ Array.fill(inA.length - 1 - index)(0)
+            Array.fill(index)(0) ++ row ++ Array.fill(padding - 1 - index)(0)
         }
 
         val delayedB = inB.transpose.zipWithIndex.map {
           case (row, index) =>
-            Array.fill(index)(0) ++ row ++ Array.fill(inB.transpose.length - 1 - index)(0)
+            Array.fill(index)(0) ++ row ++ Array.fill(padding - 1 - index)(0)
         }
 
         for (j <- 0 until 2 * N - 1) {
