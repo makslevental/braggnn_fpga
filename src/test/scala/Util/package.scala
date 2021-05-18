@@ -31,7 +31,7 @@ package object Util {
     println(s"$name: ${arr.deep}".replace("Array(", "\n[").replace(")", "]"))
   }
 
-  class RandomArray(val len: Int, val bits: Int) {
+  class RandomVector(val len: Int, val bits: Int) {
     val r = new Random
     if (bits < 1) throw new IllegalArgumentException("bits should be greater than 1")
 

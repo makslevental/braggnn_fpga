@@ -1,6 +1,6 @@
 package matmul
 
-import Util.{RandomArray, matMatMult, matVecMult}
+import Util.{RandomVector, matMatMult, matVecMult}
 import chisel3._
 import chiseltest._
 import org.scalatest._
@@ -54,8 +54,8 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
     test(new MatrixVectorProduct(vecDim, vecDim, bitWidth)) { c =>
       for (_ <- 0 until repeats) {
         // generate data based on bits
-        val vecGen = new RandomArray(vecDim, bitWidth)
-        val matGen = new RandomArray(vecDim, bitWidth)
+        val vecGen = new RandomVector(vecDim, bitWidth)
+        val matGen = new RandomVector(vecDim, bitWidth)
         val inVec  = vecGen.smallpos
         val inMat = Array.fill(vecDim) {
           matGen.smallpos
@@ -83,8 +83,8 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
     test(new MatrixMatrixProduct(N, N, N, bitWidth)) { c =>
       for (_ <- 0 until repeats) {
         // generate data based on bits
-        val AGen = new RandomArray(N, bitWidth)
-        val BGen = new RandomArray(N, bitWidth)
+        val AGen = new RandomVector(N, bitWidth)
+        val BGen = new RandomVector(N, bitWidth)
         val inA = Array.fill(N) {
           AGen.smallpos
         }
@@ -123,8 +123,8 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
     test(new MatrixVectorProduct(M, R, bitWidth)) { c =>
       for (_ <- 0 until repeats) {
         // generate data based on bits
-        val vecGen = new RandomArray(R, bitWidth)
-        val matGen = new RandomArray(R, bitWidth)
+        val vecGen = new RandomVector(R, bitWidth)
+        val matGen = new RandomVector(R, bitWidth)
         val inVec  = vecGen.smallpos
         val inMat = Array.fill(M) {
           matGen.smallpos
@@ -159,8 +159,8 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
     test(new MatrixMatrixProduct(N, M, R, bitWidth)) { c =>
       for (_ <- 0 until repeats) {
         // generate data based on bits
-        val AGen = new RandomArray(M, bitWidth)
-        val BGen = new RandomArray(R, bitWidth)
+        val AGen = new RandomVector(M, bitWidth)
+        val BGen = new RandomVector(R, bitWidth)
         val inA = Array.fill(N) {
           AGen.smallpos
         }

@@ -1,6 +1,6 @@
 package systolic
 
-import Util.{RandomArray, matMatMult}
+import Util.{RandomVector, matMatMult}
 import chisel3._
 import chiseltest._
 import org.scalatest._
@@ -15,7 +15,7 @@ class OSMatMulSpec extends FlatSpec with ChiselScalatestTester with Matchers {
     val N = 8
     test(new OSMatMul(N, N, bitWidth)) { c =>
       for (_ <- 0 until repeats) {
-        val matGen = new RandomArray(N, bitWidth)
+        val matGen = new RandomVector(N, bitWidth)
         val inA = Array.fill(N) {
           matGen.smallpos
         }
@@ -27,12 +27,12 @@ class OSMatMulSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         val padding = N - 1
         val delayedA = inA.zipWithIndex.map {
           case (row, index) =>
-            Array.fill(index)(0) ++ row ++ Array.fill(padding - 1 - index)(0)
+            Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
         }
 
         val delayedB = inB.transpose.zipWithIndex.map {
           case (row, index) =>
-            Array.fill(index)(0) ++ row ++ Array.fill(padding - 1 - index)(0)
+            Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
         }
 
         for (j <- 0 until 2 * N - 1) {
@@ -62,8 +62,8 @@ class OSMatMulSpec extends FlatSpec with ChiselScalatestTester with Matchers {
     val R = 8
     test(new OSMatMul(N, R, bitWidth)) { c =>
       for (_ <- 0 until repeats) {
-        val aGen = new RandomArray(M, bitWidth)
-        val bGen = new RandomArray(R, bitWidth)
+        val aGen = new RandomVector(M, bitWidth)
+        val bGen = new RandomVector(R, bitWidth)
         val inA = Array.fill(N) {
           aGen.smallpos
         }
