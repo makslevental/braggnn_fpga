@@ -8,7 +8,7 @@ import org.scalatest._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
-class WSMatMulSpec extends FlatSpec with ChiselScalatestTester with Matchers {
+class WSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   behavior of "WSMatMul"
 
   val repeats  = 5

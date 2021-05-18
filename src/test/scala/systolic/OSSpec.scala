@@ -5,7 +5,7 @@ import chisel3._
 import chiseltest._
 import org.scalatest._
 
-class OSMatMulSpec extends FlatSpec with ChiselScalatestTester with Matchers {
+class OSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   behavior of "OSMatMul"
 
   val repeats  = 5
