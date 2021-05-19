@@ -1,6 +1,6 @@
 package systolic
 
-import Util.{RandomVector, matMatMult, printArray}
+import Util.{RandomVector, conv, matMatMult, printArray}
 import chisel3._
 import chiseltest._
 import org.scalatest._
@@ -16,19 +16,17 @@ class ConvSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   val r        = new Random
 
   it should "should compute convolution" in {
-    val repeats = 5
-
     for (_ <- 0 until repeats) {
-      val nFilters   = 3
-      val imChannels = 3
-      val imHeight   = 3
-      val imWidth    = 3
-      val kHeight    = 2
-      val kWidth     = 2
+      val kHeight    = r.nextInt(6) + 1
+      val kWidth     = kHeight
+      val imChannels = r.nextInt(6) + 1
+      val imHeight   = r.nextInt(6) + kHeight
+      val imWidth    = r.nextInt(6) + kHeight
+      val nFilters   = r.nextInt(6) + 1
 
       // C x H x W
       val img    = Array.fill(imChannels, imHeight, imWidth)(r.nextInt(10) + 1)
-      val kernel = Array.fill(nFilters, kHeight, kWidth)(r.nextInt(10) + 1)
+      val kernel = Array.fill(nFilters, imChannels, kHeight, kWidth)(r.nextInt(10) + 1)
 
       val kMatrixRows = nFilters
       val kMatrixCols = kHeight * kWidth * imChannels
@@ -44,62 +42,67 @@ class ConvSpec extends FlatSpec with ChiselScalatestTester with Matchers {
       require(kMatrixCols == imMatrixRows)
 
       test(new WSMatMul(kMatrixRows, kMatrixCols, bitWidth)) { c =>
-//        val res = matMatMult(inA, inB)
-//
-//        val padding = math.max(N, M) - 1
-//        val delayedB = inB.zipWithIndex.map {
-//          case (row, index) =>
-//            Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
-//        }
-//
-//        println()
-//        for (i <- 0 until N) {
-//          for (j <- 0 until M) {
-//            c.io.A(i)(j).poke(inA(i)(j).U)
-//          }
-//        }
-//
-//        c.clock.step()
-//
-//        val out = new ArrayBuffer[Array[BigInt]]()
-//        for (j <- 0 until R + padding) {
-//          for (i <- 0 until M) {
-//            c.io.B(i).poke(delayedB(i)(j).U)
-//          }
-//          c.clock.step()
-//
-//          out += (0 until N).map(i => c.io.out(i).peek().litValue()).toArray
-//
-//        }
-//        for (j <- 0 until math.min(N, M) - 1) {
-//          c.clock.step()
-//          out += (0 until N).map(i => c.io.out(i).peek().litValue()).toArray
-//        }
-//
-//        for ((row, i) <- out.toArray.transpose.zipWithIndex) {
-//          val r = row.drop(M - 1 + i).take(R)
-//          try {
-//            require(r === res(i))
-//          } catch {
-//            case e: IllegalArgumentException =>
-//              println(s"N: $N M: $M R: $R")
-//              printArray(row, "row")
-//              printArray(r, "r")
-//              printArray(res(i), "res(i)")
-//
-//              printArray(inA, "inA")
-//              printArray(inB, "inB")
-//              printArray(res, "res")
-//              printArray(delayedB, "delayedB")
-//              printArray(out.toArray, "out")
-//              printArray(out.toArray.transpose, "out transpose")
-//              throw e
-//          }
-//        }
-//
-//        c.reset.poke(true.B)
-//        c.clock.step()
-//        c.reset.poke(false.B)
+        val res                 = conv(img, kernel)
+        val (imMatrix, kMatrix) = Util.im2col(img, kernel)
+        require(imMatrix.length == imMatrixRows && imMatrix.head.length == imMatrixCols)
+        require(kMatrix.length == kMatrixRows && kMatrix.head.length == kMatrixCols)
+
+        val padding = math.max(kMatrixRows, kMatrixCols) - 1
+        val delayedB = imMatrix.zipWithIndex.map {
+          case (row, index) =>
+            Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
+        }
+
+        for (i <- 0 until kMatrixRows) {
+          for (j <- 0 until kMatrixCols) {
+            c.io.A(i)(j).poke(kMatrix(i)(j).U)
+          }
+        }
+
+        c.clock.step()
+
+        val out = new ArrayBuffer[Array[BigInt]]()
+        for (j <- 0 until imMatrixCols + padding) {
+          for (i <- 0 until kMatrixCols) {
+            c.io.B(i).poke(delayedB(i)(j).U)
+          }
+          c.clock.step()
+
+          out += (0 until kMatrixRows).map(i => c.io.out(i).peek().litValue()).toArray
+
+        }
+        for (j <- 0 until math.min(kMatrixRows, kMatrixCols) - 1) {
+          c.clock.step()
+          out += (0 until kMatrixRows).map(i => c.io.out(i).peek().litValue()).toArray
+        }
+
+//        printArray(res, "res")
+//        printArray(out.toArray.transpose, "out transpose")
+
+        for ((row, i) <- out.toArray.transpose.zipWithIndex) {
+          val r = row.drop(kMatrixCols - 1 + i).take(imMatrixCols)
+          try {
+            require(r === res(i).flatten)
+          } catch {
+            case e: IllegalArgumentException =>
+              println(s"N: $kMatrixRows M: $kMatrixCols R: $imMatrixCols")
+              printArray(row, "row")
+              printArray(r, "r")
+              printArray(res(i), "res(i)")
+
+              printArray(kMatrix, "kMatrix")
+              printArray(imMatrix, "imMatrix")
+              printArray(res, "res")
+              printArray(delayedB, "delayedB")
+              printArray(out.toArray, "out")
+              printArray(out.toArray.transpose, "out transpose")
+              throw e
+          }
+        }
+
+        c.reset.poke(true.B)
+        c.clock.step()
+        c.reset.poke(false.B)
       }
 
     }

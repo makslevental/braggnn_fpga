@@ -4,6 +4,7 @@ import scala.reflect.runtime.{universe => ru}
 import scala.sys.process._
 import scala.tools.reflect.ToolBox
 import scala.util.Random
+import scala.reflect.ClassTag
 
 package object Util {
   def matMatMult(
@@ -31,10 +32,12 @@ package object Util {
     res
   }
 
-  def conv(
-      img: Array[Array[Array[Double]]],
-      kernel: Array[Array[Array[Array[Double]]]]
-  ): Array[Array[Array[Double]]] = {
+  def conv[T](
+      img: Array[Array[Array[T]]],
+      kernel: Array[Array[Array[Array[T]]]]
+  )(implicit n: Numeric[T]): Array[Array[Array[Double]]] = {
+    import n._
+
     val imChannels = img.length
     val imHeight   = img.head.length
     val imWidth    = img.head.head.length
@@ -55,7 +58,7 @@ package object Util {
           for (oW <- 0 until outputWidth) {
             for (kH <- 0 until kHeight) {
               for (kW <- 0 until kWidth) {
-                out(f)(oH)(oW) += kernel(f)(c)(kH)(kW) * img(c)(oH + kH)(oW + kW)
+                out(f)(oH)(oW) += kernel(f)(c)(kH)(kW).toDouble * img(c)(oH + kH)(oW + kW).toDouble
               }
             }
           }
@@ -63,6 +66,50 @@ package object Util {
       }
     }
     out
+  }
+
+  def im2col[T](
+      img: Array[Array[Array[T]]],
+      kernel: Array[Array[Array[Array[T]]]]
+  )(implicit n: Numeric[T], c: ClassTag[T]): (Array[Array[T]], Array[Array[T]]) = {
+    import n._
+
+    val nFilters   = kernel.length
+    val kHeight    = kernel.head.head.length
+    val kWidth     = kernel.head.head.head.length
+    val imChannels = img.length
+    val imHeight   = img.head.length
+    val imWidth    = img.head.head.length
+
+    val kMatrixRows = nFilters
+    val kMatrixCols = kHeight * kWidth * imChannels
+
+    val nKernelPositions = (imHeight - kHeight + 1) * (imWidth - kWidth + 1)
+
+    val imMatrixRows = kHeight * kWidth * imChannels
+    val imMatrixCols = nKernelPositions
+
+    val imPatches = for {
+      channel <- img
+      rows    <- channel.sliding(kHeight, 1)
+      patch   <- rows.transpose.sliding(kWidth, 1)
+    } yield patch.transpose.flatten
+
+    val imMatrix =
+      imPatches.grouped(imPatches.length / imChannels).map(_.transpose).toArray.flatten
+
+    require(imMatrix.length == imMatrixRows && imMatrix.head.length == imMatrixCols)
+
+    var kMatrix = for {
+      filterBank <- kernel
+      channel    <- filterBank
+    } yield channel.flatten
+
+    kMatrix = kMatrix.grouped(kMatrix.length / nFilters).map(_.flatten).toArray
+
+    require(kMatrix.length == kMatrixRows && kMatrix.head.length == kMatrixCols)
+
+    (imMatrix, kMatrix)
   }
 
   def printArray[T](arr: Array[T], name: String = "arr"): Unit = {
@@ -100,6 +147,33 @@ package object Util {
 }
 object HelloWorld {
   def main(args: Array[String]): Unit = {
+    testIm2Col()
+  }
+
+  def testIm2Col(): Unit = {
+    val imChannels = 3
+    val imHeight   = 3
+    val imWidth    = 3
+
+    val nFilters = 2
+    val kHeight  = 2
+    val kWidth   = 2
+    val img = Array.tabulate(imChannels, imHeight, imWidth) { (i, j, k) =>
+      i * (imHeight * imWidth) + j * imWidth + k
+    }
+
+//    Util.printArray(img, "img")
+
+    val kernel = Array.tabulate(nFilters, imChannels, kHeight, kWidth) { (i, j, k, l) =>
+      i * (imChannels * kHeight * kWidth) + j * (kHeight * kWidth) + k * kWidth + l
+    }
+
+    Util.printArray(kernel, "kernel")
+
+    Util.im2col(img, kernel)
+  }
+
+  def testConv(): Unit = {
     val repeats = 10
     for (i <- 0 until repeats) {
       val (img, kernel, trueOutput) = callPythonToMakeTensors()
@@ -135,7 +209,7 @@ object HelloWorld {
         |w = random.randint(k,10)
         |f = random.randint(1,10)
         |
-        |img = torch.randn(1,c,h,w)
+        |img = torch.randint(10,100, (1,c,h,w))
         |img = img.float()
         |print(img),0
         |print("###")
