@@ -1,10 +1,11 @@
 package systolic
 
-import Util.{RandomVector, matMatMult}
+import util.{RandomVector, matMatMult}
 import chisel3._
 import chiseltest._
 import org.scalatest._
 
+//noinspection TypeAnnotation
 class OSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   behavior of "OSMatMul"
 

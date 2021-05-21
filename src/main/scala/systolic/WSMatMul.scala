@@ -3,6 +3,7 @@ package systolic
 import chisel3._
 import chisel3.stage.ChiselStage
 
+//noinspection TypeAnnotation
 class WSMatMul(rows: Int, cols: Int, bitWidth: Int = 8) extends Module {
   val io = IO(new Bundle {
     val A   = Input(Vec(rows, Vec(cols, UInt(bitWidth.W))))

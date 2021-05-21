@@ -1,10 +1,11 @@
 package matmul
 
-import Util.{RandomVector, matMatMult, matVecMult}
+import util.{RandomVector, matMatMult, matVecMult}
 import chisel3._
 import chiseltest._
 import org.scalatest._
 
+//noinspection TypeAnnotation
 class DotProdSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   behavior of "DotProd"
 

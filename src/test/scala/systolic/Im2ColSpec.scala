@@ -5,6 +5,7 @@ import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
 
 import scala.util.Random
 
+//noinspection TypeAnnotation
 class Im2ColTests[T <: Bits](c: Im2Col[T]) extends PeekPokeTester(c) {
   val myRand = new Random
   val testImg = (0 until c.imgSize * c.imgSize * c.inChannels)

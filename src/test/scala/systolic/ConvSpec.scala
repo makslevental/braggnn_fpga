@@ -1,6 +1,6 @@
 package systolic
 
-import Util.{RandomVector, conv, matMatMult, printArray}
+import util.{conv, im2col, printArray}
 import chisel3._
 import chiseltest._
 import org.scalatest._
@@ -8,6 +8,7 @@ import org.scalatest._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
+//noinspection TypeAnnotation
 class ConvSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   behavior of "WSMatMul"
 
@@ -43,7 +44,7 @@ class ConvSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 
       test(new WSMatMul(kMatrixRows, kMatrixCols, bitWidth)) { c =>
         val res                 = conv(img, kernel)
-        val (imMatrix, kMatrix) = Util.im2col(img, kernel)
+        val (imMatrix, kMatrix) = im2col(img, kernel)
         require(imMatrix.length == imMatrixRows && imMatrix.head.length == imMatrixCols)
         require(kMatrix.length == kMatrixRows && kMatrix.head.length == kMatrixCols)
 

@@ -2,6 +2,7 @@ package systolic
 
 import chisel3._
 
+//noinspection TypeAnnotation
 class OSMatMul(rows: Int, cols: Int, bitWidth: Int) extends Module {
   val io = IO(new Bundle {
     val A = Input(Vec(rows, UInt(bitWidth.W)))

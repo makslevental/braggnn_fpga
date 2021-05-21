@@ -2,6 +2,7 @@ package systolic
 
 import chisel3._
 
+//noinspection TypeAnnotation
 class OSProcElem(val bitWidth: Int = 8) extends Module {
   val io = IO(new Bundle {
     val inH  = Input(UInt(bitWidth.W))

@@ -4,6 +4,7 @@ import chisel3._
 import chiseltest._
 import org.scalatest._
 
+//noinspection TypeAnnotation
 class MACSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   behavior of "MAC"
 

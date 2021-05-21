@@ -6,6 +6,7 @@ import chisel3.util.{isPow2, log2Ceil}
 import scala.math.pow
 
 /** Pipelined multiply and accumulate */
+//noinspection TypeAnnotation
 class MAC(bitWidth: Int = 8, cBits: Int = 16) extends Module {
   val b       = 2 * bitWidth
   val outBits = Math.max(b, cBits) + 1
@@ -31,6 +32,7 @@ class MAC(bitWidth: Int = 8, cBits: Int = 16) extends Module {
   *
   * This unit loads input bits into register and performs addition in the next cycle
   */
+//noinspection TypeAnnotation
 class PipeAdder(bitWidth: Int = 8) extends Module {
   val outBits = bitWidth + 1
   val io = IO(
@@ -53,6 +55,7 @@ class PipeAdder(bitWidth: Int = 8) extends Module {
   * This unit wires input bits to an adder directly.
   * The output comes out of combinational logic without waiting for another cycle.
   */
+//noinspection TypeAnnotation
 class Adder(bitWidth: Int = 8) extends Module {
   val outBits = bitWidth + 1
   val io = IO(new Bundle {

@@ -6,7 +6,7 @@ import scala.tools.reflect.ToolBox
 import scala.util.Random
 import scala.reflect.ClassTag
 
-package object Util {
+package object util {
   def matMatMult(
       A: Array[Array[Int]],
       B: Array[Array[Int]]
@@ -47,8 +47,8 @@ package object Util {
     val kHeight = kernel.head.head.length
     val kWidth  = kernel.head.head.head.length
 
-    val outputHeight = (imHeight - kHeight + 1)
-    val outputWidth  = (imWidth - kWidth + 1)
+    val outputHeight = imHeight - kHeight + 1
+    val outputWidth  = imWidth - kWidth + 1
 
     val out = Array.fill(nFilters, outputHeight, outputWidth)(0.0)
 
@@ -145,6 +145,8 @@ package object Util {
   }
 
 }
+
+//noinspection TypeAnnotation
 object HelloWorld {
   def main(args: Array[String]): Unit = {
     testIm2Col()
@@ -168,16 +170,16 @@ object HelloWorld {
       i * (imChannels * kHeight * kWidth) + j * (kHeight * kWidth) + k * kWidth + l
     }
 
-    Util.printArray(kernel, "kernel")
+    util.printArray(kernel, "kernel")
 
-    Util.im2col(img, kernel)
+    util.im2col(img, kernel)
   }
 
   def testConv(): Unit = {
     val repeats = 10
     for (i <- 0 until repeats) {
       val (img, kernel, trueOutput) = callPythonToMakeTensors()
-      val output                    = Util.conv(img, kernel)
+      val output                    = util.conv(img, kernel)
       val o                         = output.flatten.flatten
       val t                         = trueOutput.flatten.flatten
       require(o.length == t.length)

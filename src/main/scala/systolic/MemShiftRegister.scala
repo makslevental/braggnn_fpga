@@ -8,6 +8,7 @@ import chisel3.util._
 /** This is functionally identical to a ShiftRegister but uses a Memory for storage.
   * If the value of n <= 2 it will revert to the ShiftRegister implementation.
   */
+//noinspection TypeAnnotation
 object MemShiftRegister {
 
   /** Returns the n-cycle delayed version of the input signal with reset initialization.
@@ -24,8 +25,7 @@ object MemShiftRegister {
   }
 }
 
-/** Do not use this class directly, instead use [[chisel3.util.MemShiftRegister$]] Factory method
-  */
+//noinspection TypeAnnotation
 class MemShiftRegister[T <: Data](genType: T, val n: Int) extends Module {
   val io = IO(new Bundle {
     val in  = Input(genType.cloneType)
@@ -63,7 +63,7 @@ class MemShiftRegister[T <: Data](genType: T, val n: Int) extends Module {
     val uintBuf = RegNext(uintOut)
 
     val sintOut = Wire(grpedVec.cloneType)
-    for (i <- 0 until grpedVec.size) {
+    for (i <- grpedVec.indices) {
       val b: Bits = uintBuf((i + 1) * bitWidth - 1, i * bitWidth)
       if (sintOut.head.isInstanceOf[SInt])
         sintOut(grpedVec.size - i - 1) := b.asSInt()

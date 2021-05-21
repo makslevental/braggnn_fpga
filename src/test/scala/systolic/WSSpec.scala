@@ -1,6 +1,6 @@
 package systolic
 
-import Util.{RandomVector, matMatMult, printArray}
+import util.{RandomVector, matMatMult, printArray}
 import chisel3._
 import chiseltest._
 import org.scalatest._
@@ -8,6 +8,7 @@ import org.scalatest._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
+//noinspection TypeAnnotation
 class WSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   behavior of "WSMatMul"
 

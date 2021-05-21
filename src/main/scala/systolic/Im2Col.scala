@@ -5,6 +5,7 @@ import chisel3.util._
 
 import scala.collection.mutable.ArrayBuffer
 
+//noinspection TypeAnnotation
 class Im2Col[T <: Bits](
     val dtype: T,
     val imgSize: Int,
@@ -22,7 +23,7 @@ class Im2Col[T <: Bits](
   val dWidth   = dtype.getWidth
   val outWidth = (dWidth * throughput).toInt
   val outUInt  = UInt(width = outWidth.W)
-  val cycles   = (dtype.getWidth / outWidth) // TODO(max) output cycles?
+  val cycles   = dtype.getWidth / outWidth // TODO(max) output cycles?
   val cyclesBW = {
     if (log2Ceil(cycles) == 0)
       1
@@ -75,7 +76,7 @@ class Im2Col[T <: Bits](
   }
   val padAmt = {
     if (padding)
-      (kernelSize / 2).toInt // TODO(max) this is floor - it should be plus 1?
+      kernelSize / 2 // TODO(max) this is floor - it should be plus 1?
     else
       0
   }
@@ -198,7 +199,7 @@ class Im2Col[T <: Bits](
   }
   val vld = {
     if (stride == 2 && !padding) {
-      val vldCycPerRow = (imgSize / stride).toInt
+      val vldCycPerRow = imgSize / stride
       val rowDelay     = !rowCntr(0) && ShiftRegister(vldIn, 1, false.B, true.B)
       ShiftRegister(!colCntr(0) && rowDelay, latency, false.B, true.B)
     } else
