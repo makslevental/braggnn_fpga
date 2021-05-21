@@ -10,12 +10,12 @@ Add `"edu.berkeley.cs" %% "hardfloat" % "1.3-SNAPSHOT"` to `build.sbt`
 
 # im2col
 
-![](im2col.jpeg)
+![](readme/im2col.jpeg)
 
 # WS Systolic Array
 
-![](WS_systolic_array.png)
+![](readme/WS_systolic_array.png)
 
 # OS and WS Systolic Array
 
-![](OS_and_WS_systolic_array.png)
+![](readme/OS_and_WS_systolic_array.png)
