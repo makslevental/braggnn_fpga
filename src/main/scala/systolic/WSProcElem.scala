@@ -20,3 +20,8 @@ class WSProcElem(val bitWidth: Int = 8) extends Module {
   io.outPS := psReg
   io.outV := vReg
 }
+
+object WSProcElem extends App {
+//  chisel3.stage.ChiselStage.emitVerilog(() => RawModule)
+  chisel3.Driver.execute(args, () => new WSProcElem)
+}

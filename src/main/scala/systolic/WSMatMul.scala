@@ -1,8 +1,9 @@
 package systolic
 
 import chisel3._
+import chisel3.stage.ChiselStage
 
-class WSMatMul(rows: Int, cols: Int, bitWidth: Int) extends Module {
+class WSMatMul(rows: Int, cols: Int, bitWidth: Int = 8) extends Module {
   val io = IO(new Bundle {
     val A   = Input(Vec(rows, Vec(cols, UInt(bitWidth.W))))
     val B   = Input(Vec(cols, UInt(bitWidth.W)))
@@ -43,4 +44,8 @@ class WSMatMul(rows: Int, cols: Int, bitWidth: Int) extends Module {
     io.out(row) := pElems(row).last.outPS // results
   }
 
+}
+
+object WSMatMul extends App {
+  (new ChiselStage).emitVerilog(new WSMatMul(2, 2))
 }
