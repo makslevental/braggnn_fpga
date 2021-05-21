@@ -88,7 +88,7 @@ class Im2ColSpec extends ChiselFlatSpec {
   val qSize      = 10
   val kernelSize = 3
   val stride     = 1
-  val imgSize    = 32
+  val imgSize    = 16
   val padding    = true
   val noFifo     = false
   val dWidth     = 16
