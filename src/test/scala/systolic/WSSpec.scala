@@ -1,6 +1,6 @@
 package systolic
 
-import util.{RandomVector, matMatMult, printArray}
+import myutil.util.{matMatMult, printArray, RandomVector}
 import chisel3._
 import chiseltest._
 import org.scalatest._
@@ -10,9 +10,9 @@ import scala.util.Random
 
 //noinspection TypeAnnotation
 class WSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-  behavior of "WSMatMul"
+  behavior.of("WSMatMul")
 
-  val repeats  = 5
+  val repeats = 5
   val bitWidth = 32
 
   it should "should compute WS product" in {
@@ -47,7 +47,7 @@ class WSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 
   it should "should compute square matrix matrix product" in {
     val repeats = 5
-    val r       = new Random
+    val r = new Random
 
     for (_ <- 0 until repeats) {
       val N = r.nextInt(10) + 1
@@ -62,9 +62,8 @@ class WSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         val res = matMatMult(inA, inB)
 
         val padding = N - 1
-        val delayedB = inB.zipWithIndex.map {
-          case (row, index) =>
-            Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
+        val delayedB = inB.zipWithIndex.map { case (row, index) =>
+          Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
         }
         for (i <- 0 until N) {
           for (j <- 0 until N) {
@@ -104,7 +103,7 @@ class WSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   }
   it should "should compute non-square matrix matrix product" in {
     val repeats = 5
-    val r       = new Random
+    val r = new Random
 
     for (_ <- 0 until repeats) {
       val N = r.nextInt(10) + 1
@@ -122,9 +121,8 @@ class WSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         val res = matMatMult(inA, inB)
 
         val padding = math.max(N, M) - 1
-        val delayedB = inB.zipWithIndex.map {
-          case (row, index) =>
-            Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
+        val delayedB = inB.zipWithIndex.map { case (row, index) =>
+          Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
         }
 
         println()

@@ -1,6 +1,6 @@
 package systolic
 
-import util.{conv, im2col, printArray}
+import myutil.util.{conv, im2col, printArray}
 import chisel3._
 import chiseltest._
 import org.scalatest._
@@ -10,23 +10,23 @@ import scala.util.Random
 
 //noinspection TypeAnnotation
 class ConvSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-  behavior of "WSMatMul"
+  behavior.of("WSMatMul")
 
-  val repeats  = 5
+  val repeats = 5
   val bitWidth = 32
-  val r        = new Random
+  val r = new Random
 
   it should "should compute convolution" in {
     for (_ <- 0 until repeats) {
-      val kHeight    = r.nextInt(6) + 1
-      val kWidth     = kHeight
+      val kHeight = r.nextInt(6) + 1
+      val kWidth = kHeight
       val imChannels = r.nextInt(6) + 1
-      val imHeight   = r.nextInt(6) + kHeight
-      val imWidth    = r.nextInt(6) + kHeight
-      val nFilters   = r.nextInt(6) + 1
+      val imHeight = r.nextInt(6) + kHeight
+      val imWidth = r.nextInt(6) + kHeight
+      val nFilters = r.nextInt(6) + 1
 
       // C x H x W
-      val img    = Array.fill(imChannels, imHeight, imWidth)(r.nextInt(10) + 1)
+      val img = Array.fill(imChannels, imHeight, imWidth)(r.nextInt(10) + 1)
       val kernel = Array.fill(nFilters, imChannels, kHeight, kWidth)(r.nextInt(10) + 1)
 
       val kMatrixRows = nFilters
@@ -43,15 +43,14 @@ class ConvSpec extends FlatSpec with ChiselScalatestTester with Matchers {
       require(kMatrixCols == imMatrixRows)
 
       test(new WSMatMul(kMatrixRows, kMatrixCols, bitWidth)) { c =>
-        val res                 = conv(img, kernel)
+        val res = conv(img, kernel)
         val (imMatrix, kMatrix) = im2col(img, kernel)
         require(imMatrix.length == imMatrixRows && imMatrix.head.length == imMatrixCols)
         require(kMatrix.length == kMatrixRows && kMatrix.head.length == kMatrixCols)
 
         val padding = math.max(kMatrixRows, kMatrixCols) - 1
-        val delayedB = imMatrix.zipWithIndex.map {
-          case (row, index) =>
-            Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
+        val delayedB = imMatrix.zipWithIndex.map { case (row, index) =>
+          Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
         }
 
         for (i <- 0 until kMatrixRows) {

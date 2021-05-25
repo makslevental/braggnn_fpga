@@ -1,32 +1,31 @@
 package matmul
 
-import util.{RandomVector, matMatMult, matVecMult}
+import myutil.util.{matMatMult, matVecMult, RandomVector}
 import chisel3._
 import chiseltest._
 import org.scalatest._
 
 //noinspection TypeAnnotation
 class DotProdSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-  behavior of "DotProd"
+  behavior.of("DotProd")
 
-  val rand     = new scala.util.Random(1)
+  val rand = new scala.util.Random(1)
   val elements = 8
   val bitWidth = 8
-  val repeats  = 5
+  val repeats = 5
   def dotProduct(vec1: List[Int], vec2: List[Int]): Int =
     vec1.zip(vec2).map { case (a, b) => a * b }.sum
 
   it should "should compute dot product" in {
     test(new DotProduct(bitWidth, elements)) { c =>
       for (_ <- 0 until repeats) {
-        val vec1    = List.fill(elements)(rand.nextInt(50) + 1)
-        val vec2    = List.fill(elements)(rand.nextInt(50) + 1)
+        val vec1 = List.fill(elements)(rand.nextInt(50) + 1)
+        val vec2 = List.fill(elements)(rand.nextInt(50) + 1)
         val dotProd = dotProduct(vec1, vec2)
 
-        vec1.zip(vec2).zipWithIndex.foreach {
-          case ((a, b), i) =>
-            c.io.a(i).poke(a.S)
-            c.io.b(i).poke(b.S)
+        vec1.zip(vec2).zipWithIndex.foreach { case ((a, b), i) =>
+          c.io.a(i).poke(a.S)
+          c.io.b(i).poke(b.S)
         }
         c.clock.step(1)
         c.clock.step(1)
@@ -42,13 +41,13 @@ class DotProdSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 }
 
 class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-  behavior of "MatrixMult"
+  behavior.of("MatrixMult")
 
-  val N        = 16
-  val M        = 8
-  val R        = 4
-  val repeats  = 5
-  val vecDim   = 8
+  val N = 16
+  val M = 8
+  val R = 4
+  val repeats = 5
+  val vecDim = 8
   val bitWidth = 32
 
   it should "should compute square matrix vector product" in {
@@ -57,7 +56,7 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         // generate data based on bits
         val vecGen = new RandomVector(vecDim, bitWidth)
         val matGen = new RandomVector(vecDim, bitWidth)
-        val inVec  = vecGen.smallpos
+        val inVec = vecGen.smallpos
         val inMat = Array.fill(vecDim) {
           matGen.smallpos
         }
@@ -126,7 +125,7 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         // generate data based on bits
         val vecGen = new RandomVector(R, bitWidth)
         val matGen = new RandomVector(R, bitWidth)
-        val inVec  = vecGen.smallpos
+        val inVec = vecGen.smallpos
         val inMat = Array.fill(M) {
           matGen.smallpos
         }
@@ -203,12 +202,12 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 }
 
 class FrobeniusInnerProductSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-  behavior of "FrobeniusInnerProduct"
+  behavior.of("FrobeniusInnerProduct")
 
-  val rand     = new scala.util.Random(1)
+  val rand = new scala.util.Random(1)
   val elements = 4
   val bitWidth = 8
-  val repeats  = 5
+  val repeats = 5
 
   def frobProduct(mat1: List[List[Int]], mat2: List[List[Int]]): Int =
     mat1.zip(mat2).map { case (a, b) => dotProduct(a, b) }.sum
@@ -225,13 +224,11 @@ class FrobeniusInnerProductSpec extends FlatSpec with ChiselScalatestTester with
           List.fill(elements)(List.fill(elements)(rand.nextInt(20) + 1))
         val frobProd = frobProduct(mat1, mat2)
 
-        mat1.zip(mat2).zipWithIndex.foreach {
-          case ((vec1, vec2), i) =>
-            vec1.zip(vec2).zipWithIndex.foreach {
-              case ((a, b), j) =>
-                c.io.A.data(i)(j).poke(a.S)
-                c.io.B.data(i)(j).poke(b.S)
-            }
+        mat1.zip(mat2).zipWithIndex.foreach { case ((vec1, vec2), i) =>
+          vec1.zip(vec2).zipWithIndex.foreach { case ((a, b), j) =>
+            c.io.A.data(i)(j).poke(a.S)
+            c.io.B.data(i)(j).poke(b.S)
+          }
         }
         c.clock.step(1)
         c.clock.step(1)

@@ -1,15 +1,15 @@
 package systolic
 
-import util.{RandomVector, matMatMult}
+import myutil.util.{matMatMult, RandomVector}
 import chisel3._
 import chiseltest._
 import org.scalatest._
 
 //noinspection TypeAnnotation
 class OSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-  behavior of "OSMatMul"
+  behavior.of("OSMatMul")
 
-  val repeats  = 5
+  val repeats = 5
   val bitWidth = 32
 
   it should "should compute square matrix matrix product" in {
@@ -26,14 +26,12 @@ class OSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         val res = matMatMult(inA, inB)
 
         val padding = N - 1
-        val delayedA = inA.zipWithIndex.map {
-          case (row, index) =>
-            Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
+        val delayedA = inA.zipWithIndex.map { case (row, index) =>
+          Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
         }
 
-        val delayedB = inB.transpose.zipWithIndex.map {
-          case (row, index) =>
-            Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
+        val delayedB = inB.transpose.zipWithIndex.map { case (row, index) =>
+          Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
         }
 
         for (j <- 0 until 2 * N - 1) {
@@ -75,14 +73,12 @@ class OSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 
         val padding = math.max(N, M) - 1
 
-        val delayedA = inA.zipWithIndex.map {
-          case (row, index) =>
-            Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
+        val delayedA = inA.zipWithIndex.map { case (row, index) =>
+          Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
         }
 
-        val delayedB = inB.transpose.zipWithIndex.map {
-          case (row, index) =>
-            Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
+        val delayedB = inB.transpose.zipWithIndex.map { case (row, index) =>
+          Array.fill(index)(0) ++ row ++ Array.fill(padding - index)(0)
         }
 
         for (j <- 0 until N + M - 1) {

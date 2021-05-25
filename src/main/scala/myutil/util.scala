@@ -1,3 +1,5 @@
+package myutil
+
 import scala.math.pow
 import scala.reflect.runtime.currentMirror
 import scala.reflect.runtime.{universe => ru}
@@ -6,18 +8,18 @@ import scala.tools.reflect.ToolBox
 import scala.util.Random
 import scala.reflect.ClassTag
 
-package object util {
+object util {
   def matMatMult(
-      A: Array[Array[Int]],
-      B: Array[Array[Int]]
+    A: Array[Array[Int]],
+    B: Array[Array[Int]]
   ): Array[Array[Int]] = {
     B.transpose.map(b => matVecMult(A, b, 0)).transpose
   }
 
   def matVecMult(
-      mat: Array[Array[Int]],
-      vec: Array[Int],
-      shift: Int
+    mat:   Array[Array[Int]],
+    vec:   Array[Int],
+    shift: Int
   ): Array[Int] = {
     val res = Array.fill(mat.length) {
       0
@@ -33,22 +35,24 @@ package object util {
   }
 
   def conv[T](
-      img: Array[Array[Array[T]]],
-      kernel: Array[Array[Array[Array[T]]]]
-  )(implicit n: Numeric[T]): Array[Array[Array[Double]]] = {
+    img:    Array[Array[Array[T]]],
+    kernel: Array[Array[Array[Array[T]]]]
+  )(
+    implicit n: Numeric[T]
+  ): Array[Array[Array[Double]]] = {
     import n._
 
     val imChannels = img.length
-    val imHeight   = img.head.length
-    val imWidth    = img.head.head.length
+    val imHeight = img.head.length
+    val imWidth = img.head.head.length
 
     val nFilters = kernel.length
     require(kernel.head.length == imChannels)
     val kHeight = kernel.head.head.length
-    val kWidth  = kernel.head.head.head.length
+    val kWidth = kernel.head.head.head.length
 
     val outputHeight = imHeight - kHeight + 1
-    val outputWidth  = imWidth - kWidth + 1
+    val outputWidth = imWidth - kWidth + 1
 
     val out = Array.fill(nFilters, outputHeight, outputWidth)(0.0)
 
@@ -69,17 +73,20 @@ package object util {
   }
 
   def im2col[T](
-      img: Array[Array[Array[T]]],
-      kernel: Array[Array[Array[Array[T]]]]
-  )(implicit n: Numeric[T], c: ClassTag[T]): (Array[Array[T]], Array[Array[T]]) = {
+    img:    Array[Array[Array[T]]],
+    kernel: Array[Array[Array[Array[T]]]]
+  )(
+    implicit n: Numeric[T],
+    c:          ClassTag[T]
+  ): (Array[Array[T]], Array[Array[T]]) = {
     import n._
 
-    val nFilters   = kernel.length
-    val kHeight    = kernel.head.head.length
-    val kWidth     = kernel.head.head.head.length
+    val nFilters = kernel.length
+    val kHeight = kernel.head.head.length
+    val kWidth = kernel.head.head.head.length
     val imChannels = img.length
-    val imHeight   = img.head.length
-    val imWidth    = img.head.head.length
+    val imHeight = img.head.length
+    val imWidth = img.head.head.length
 
     val kMatrixRows = nFilters
     val kMatrixCols = kHeight * kWidth * imChannels
@@ -91,8 +98,8 @@ package object util {
 
     val imPatches = for {
       channel <- img
-      rows    <- channel.sliding(kHeight, 1)
-      patch   <- rows.transpose.sliding(kWidth, 1)
+      rows <- channel.sliding(kHeight, 1)
+      patch <- rows.transpose.sliding(kWidth, 1)
     } yield patch.transpose.flatten
 
     val imMatrix =
@@ -102,7 +109,7 @@ package object util {
 
     var kMatrix = for {
       filterBank <- kernel
-      channel    <- filterBank
+      channel <- filterBank
     } yield channel.flatten
 
     kMatrix = kMatrix.grouped(kMatrix.length / nFilters).map(_.flatten).toArray
@@ -144,6 +151,74 @@ package object util {
     }
   }
 
+  /** Pretty prints a Scala value similar to its source represention.
+    * Particularly useful for case classes.
+    *
+    * @param a - The value to pretty print.
+    * @param indentSize - Number of spaces for each indent.
+    * @param maxElementWidth - Largest element size before wrapping.
+    * @param depth - Initial depth to pretty print indents.
+    * @return
+    */
+  def prettyPrint(a: Any, indentSize: Int = 2, maxElementWidth: Int = 30, depth: Int = 0): String = {
+    val indent = " " * depth * indentSize
+    val fieldIndent = indent + (" " * indentSize)
+    val nextDepth = prettyPrint(_: Any, indentSize, maxElementWidth, depth + 1)
+    a match {
+      case s: String =>
+        val replaceMap = Seq(
+          "\n" -> "\\n",
+          "\r" -> "\\r",
+          "\t" -> "\\t",
+          "\"" -> "\\\""
+        )
+        '"' + replaceMap.foldLeft(s) { case (acc, (c, r)) => acc.replace(c, r) } + '"'
+      case opt: Some[_] =>
+        val resultOneLine = s"Some(${nextDepth(opt.get)})"
+        if (resultOneLine.length <= maxElementWidth) return resultOneLine
+        s"Some(\n$fieldIndent${nextDepth(opt.get)}\n$indent)"
+      case xs: Seq[_] if xs.isEmpty =>
+        xs.toString()
+      case map: Map[_, _] if map.isEmpty =>
+        map.toString()
+      case xs: Map[_, _] =>
+        val result = xs.map { case (key, value) => s"\n$fieldIndent${nextDepth(key)} -> ${nextDepth(value)}" }.toString
+        "Map" + s"${result.substring(0, result.length - 1)}\n$indent)".substring(4)
+      // Make Strings look similar to their literal form.
+      // For an empty Seq just use its normal String representation.
+      case xs: Seq[_] =>
+        // If the Seq is not too long, pretty print on one line.
+        val resultOneLine = xs.map(nextDepth).toString()
+        if (resultOneLine.length <= maxElementWidth) return resultOneLine
+        // Otherwise, build it with newlines and proper field indents.
+        val result = xs.map(x => s"\n$fieldIndent${nextDepth(x)}").toString()
+        result.substring(0, result.length - 1) + "\n" + indent + ")"
+      // Product should cover case classes.
+      case p: Product =>
+        val prefix = p.productPrefix
+        // We'll use reflection to get the constructor arg names and values.
+        val cls = p.getClass
+        val fields = cls.getDeclaredFields.filterNot(_.isSynthetic).map(_.getName)
+        val values = p.productIterator.toSeq
+        // If we weren't able to match up fields/values, fall back to toString.
+        if (fields.length != values.length) return p.toString
+        fields.zip(values).toList match {
+          // If there are no fields, just use the normal String representation.
+          case Nil => p.toString
+          // If there is more than one field, build up the field names and values.
+          case kvps =>
+            val prettyFields = kvps.map { case (k, v) => s"$k = ${nextDepth(v)}" }
+            // If the result is not too long, pretty print on one line.
+            val resultOneLine = s"$prefix(${prettyFields.mkString(", ")})"
+            if (resultOneLine.length <= maxElementWidth) return resultOneLine
+            // Otherwise, build it with newlines and proper field indents.
+            s"$prefix(\n${kvps.map { case (k, v) => s"$fieldIndent$k = ${nextDepth(v)}" }.mkString(",\n")}\n$indent)"
+        }
+      // If we haven't specialized this type, just use its toString.
+      case _ => a.toString
+    }
+  }
+
 }
 
 //noinspection TypeAnnotation
@@ -154,12 +229,12 @@ object HelloWorld {
 
   def testIm2Col(): Unit = {
     val imChannels = 3
-    val imHeight   = 3
-    val imWidth    = 3
+    val imHeight = 3
+    val imWidth = 3
 
     val nFilters = 2
-    val kHeight  = 2
-    val kWidth   = 2
+    val kHeight = 2
+    val kWidth = 2
     val img = Array.tabulate(imChannels, imHeight, imWidth) { (i, j, k) =>
       i * (imHeight * imWidth) + j * imWidth + k
     }
@@ -179,9 +254,9 @@ object HelloWorld {
     val repeats = 10
     for (i <- 0 until repeats) {
       val (img, kernel, trueOutput) = callPythonToMakeTensors()
-      val output                    = util.conv(img, kernel)
-      val o                         = output.flatten.flatten
-      val t                         = trueOutput.flatten.flatten
+      val output = util.conv(img, kernel)
+      val o = output.flatten.flatten
+      val t = trueOutput.flatten.flatten
       require(o.length == t.length)
       (o, t).zipped.foreach((x, y) => require(~=(x, y, 0.01), s"$x $y"))
       println(s"test $i success")
@@ -194,7 +269,7 @@ object HelloWorld {
 
   def getTypeTag[T: ru.TypeTag](obj: T) = ru.typeTag[T]
 
-  type Img    = Array[Array[Array[Double]]]
+  type Img = Array[Array[Array[Double]]]
   type Kernel = Array[Array[Array[Array[Double]]]]
   type Output = Array[Array[Array[Double]]]
 
@@ -290,4 +365,5 @@ object HelloWorld {
     stderrWriter.close()
     (exitValue, stdoutStream.toString, stderrStream.toString)
   }
+
 }
