@@ -33,7 +33,7 @@ imgSize = 16
 noReg = (kernelSize - 1)
 bufferSize = runtimeCycles * inputCycles * imgSize - noReg
 latency = inputCycles * runtimeCycles * imgSize * (kernelSize - (padAmt + 1)) + (
-            kernelSize - (padAmt + 1)) * runtimeCycles * inputCycles + 1
+        kernelSize - (padAmt + 1)) * runtimeCycles * inputCycles + 1
 
 print(make_img(imgSize, 0, channels)[:, :, 0])
 padded_img = make_img(imgSize, padAmt, channels)[:, :, 0]
@@ -43,28 +43,17 @@ print(padded_img)
 
 checks = []
 patches = sliding_window_view(padded_img, (kernelSize, kernelSize))
-for _ in range(20):
+for _ in range(2):
     for i in reversed(range(imgSize)):
         for j in reversed(range(imgSize)):
             checks.append(patches[i, j])
 
-colWrap = False
-rowWrap = False
 for i, outs in enumerate(outputs):
     (imRowIdx, imColIdx), outs = outs[0], outs[1:]
     full = np.array(outs).reshape(kernelSize, kernelSize)
     if i >= latency - 1:
         correct = checks[i - (latency - 1)]
 
-    if (imColIdx - 1) % imgSize == imgSize - 1 or (imColIdx - 2) % imgSize == imgSize - 1:
-        colWrap = True
-    else:
-        colWrap = False
-
-    if (imRowIdx - 1) % imgSize == imgSize - 1 or (imRowIdx - 2) % imgSize == imgSize - 1:
-        rowWrap = True
-    else:
-        rowWrap = False
 
     regOuts = np.zeros(kernelSize * kernelSize)
 
@@ -76,45 +65,36 @@ for i, outs in enumerate(outputs):
             regOutIdx = outsIdx * channels + ch
             regOuts[regOutIdx] = outAtRowColCh
 
-            # left condition
-            if padAmt <= imColIdx < kernelSize and kColIdx > imColIdx:
+            # beginning of row condition (left side of patch)
+            if padAmt <= imColIdx < kColIdx:
                 regOuts[regOutIdx] = 0
-            # wrap from right to left condition
-            if colWrap:
-                if imColIdx < padAmt and kColIdx <= imColIdx:
-                    regOuts[regOutIdx] = 0
+            # wrap from end to beginning of row
+            elif kColIdx <= imColIdx < padAmt:
+                regOuts[regOutIdx] = 0
+
+            if imColIdx < padAmt:
                 # if colWrap act like the previous row!!!!
-                if padAmt <= imRowIdx - 1 < kernelSize and kRowIdx > imRowIdx - 1:
+                prevRow = imRowIdx - 1
+                print("prevRow", prevRow)
+                if padAmt <= prevRow < kRowIdx:
                     regOuts[regOutIdx] = 0
-
-                if imRowIdx - 1 < padAmt and kRowIdx <= imRowIdx - 1:
+                if kRowIdx <= prevRow < padAmt:
                     regOuts[regOutIdx] = 0
-
             else:
-                if padAmt <= imRowIdx < kernelSize and kRowIdx > imRowIdx:
+                # first row condition
+                if padAmt <= imRowIdx < kRowIdx:
                     regOuts[regOutIdx] = 0
-                # wrap from bottom to top
-                if rowWrap and imRowIdx < padAmt and kRowIdx <= imRowIdx:
+                # wrap from last row to first row of next image
+                if kRowIdx <= imRowIdx < padAmt:
                     regOuts[regOutIdx] = 0
-
 
     r = regOuts.reshape(5, 5)
     if i >= latency - 1:
-        if rowWrap and colWrap and np.all(r == correct):
-            pass
-            # print(i, "both true", imRowIdx, imColIdx)
-            # pprint(checks[i-(latency-1)])
-            # pprint(r)
-            # print("=======================")
-        elif rowWrap and colWrap and not np.all(r == correct):
-            print(i, "both false", imRowIdx, imColIdx)
-            pprint(correct)
-            pprint(r)
-            print("***********************")
-        elif not np.all(r == correct):
-            print(i, rowWrap, colWrap)
-            print(i, "other false", imRowIdx, imColIdx)
-            pprint(correct)
-            pprint(r)
+        print("correct")
+        pprint(correct)
+        print("r")
+        pprint(r)
+        if not np.all(r == correct):
+            print(i, "false", imRowIdx, imColIdx)
             print("***********************")
 

@@ -1,9 +1,8 @@
 package systolic
 
-import Chisel.{Counter, Queue, RegEnable, ShiftRegister, Valid}
+import Chisel.{Counter, Queue, ShiftRegister, Valid}
 import chisel3._
 import chisel3.util.{log2Ceil, Decoupled}
-import myutil.util.prettyPrint
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -92,6 +91,7 @@ class Im2Col[T <: Bits](
   val (inCntr, inCntrWrap) = Counter(vldIn, cyclesPerImage)
   val imCol = Wire(UInt(width = log2Ceil(imgSize).W))
   val imRow = Wire(UInt(width = log2Ceil(imgSize).W))
+  val prevRow = Wire(SInt(width = log2Ceil(imgSize + 1).W))
   println("log2Ceil", log2Ceil(cyclesPerImage))
   println(runtimeCycles, inputCycles)
   println("colCntr", log2Ceil(imgSize * runtimeCycles * inputCycles) - 1, log2Ceil(runtimeCycles * inputCycles))
@@ -104,7 +104,8 @@ class Im2Col[T <: Bits](
   // x – the high bit
   // y – the low bit
   imRow := inCntr(log2Ceil(cyclesPerImage) - 1, log2Ceil(imgSize * runtimeCycles * inputCycles))
-
+  prevRow := imRow.asSInt() - 1.S
+  printf("prevRow %d\n", prevRow)
   // TODO(max): removing this depends on runtimeCycles and inputCycles being one each
 //  if (padding) {
 //    val cyclesPerImagePad = imgSize * padAmt * runtimeCycles * inputCycles
@@ -126,7 +127,7 @@ class Im2Col[T <: Bits](
 //  }
 
 //  println("rowCntr", log2Ceil(cyclesPerImage) - 1, log2Ceil(imgSize * runtimeCycles * inputCycles))
-//  printf("valid %d inCntr %d colCntr %d  rowCntr %d \n", vldIn, inCntr, imCol, imRow)
+  printf("valid, colCntr, rowCntr  %d, %d, %d\n", vldIn, imCol, imRow)
 
   // TODO(max) invert the chopping?
   val bitsOut = Reg(Vec(channels, outUInt.cloneType))
@@ -167,70 +168,50 @@ class Im2Col[T <: Bits](
 
   val outs = outputs.toList.map(_.toList)
   val regOuts = Reg(VecInit(outs.reduce(_ ++ _)).cloneType)
-//  println("outs", prettyPrint(outs))
-//  println("regOuts", prettyPrint(regOuts))
-//  println("padAmt", padAmt)
-  if (padding) {
-//    printf("outAtRowColCh")
-    printf("[(%d, %d),", imRow, imCol)
-    for (kRow <- 0 until kernelSize) {
-      for (kCol <- 0 until kernelSize) {
-        val outsIdx = kRow * kernelSize + kCol
-        val outAtRowCol = outs(outsIdx)
-        for ((outAtRowColCh, ch) <- outAtRowCol.zipWithIndex) {
-          val regOutIdx = outsIdx * channels + ch
-          regOuts(regOutIdx) := outAtRowColCh
-          printf("%d,", outAtRowColCh)
+  if (padding) for (kRow <- 0 until kernelSize) {
+    for (kCol <- 0 until kernelSize) {
+      val outsIdx = kRow * kernelSize + kCol
+      val outAtRowCol = outs(outsIdx)
+      for ((outAtRowColCh, ch) <- outAtRowCol.zipWithIndex) {
+        val regOutIdx = outsIdx * channels + ch
+        regOuts(regOutIdx) := outAtRowColCh
 
-//          println("col, row, padAmt", kCol, kRow, padAmt)
-          // TODO(max): why is the right condition???
-          if (kCol < padAmt) {
-            //     0          2        0
-            // when row is zero top two rows of kernel should be 0
-            when(vldIn && imRow <= ((padAmt - 1) - kCol).U) {
-//              printf("condition 1 row %d col %d ch %d\n", kRow.U, kCol.U, ch.U)
-              regOuts(regOutIdx) := 0.U
-            }
-          } else if (kCol > padAmt) {
-            when(vldIn && imRow >= padAmt.U && imRow <= (kCol - padAmt).U) {
-//              printf("condition 2 row %d col %d ch %d\n", kRow.U, kCol.U, ch.U)
-              regOuts(regOutIdx) := 0.U
-            }
+        when(padAmt.U <= imCol && imCol < kCol.U) {
+          regOuts(regOutIdx) := 0.U
+        }.elsewhen(kCol.U <= imCol && imCol < padAmt.U) {
+          regOuts(regOutIdx) := 0.U
+        }
+
+        when(imCol < padAmt.U) {
+          when(padAmt.S <= prevRow && prevRow < kRow.S) {
+            regOuts(regOutIdx) := 0.U
           }
-
-          // rows before pad
-          if (kRow < padAmt) {
-            val botCond = ShiftRegister(imCol <= ((padAmt - 1) - kRow).U, runtimeCycles)
-            when(vldIn && botCond) {
-//              printf("condition 3 row %d col %d ch %d\n", kRow.U, kCol.U, ch.U)
-              regOuts(regOutIdx) := 0.U
-            }
-          } else if (kRow > padAmt) {
-            val topCond =
-              ShiftRegister(imCol >= padAmt.U && imCol <= (kRow - padAmt).U, runtimeCycles)
-            when(vldIn && topCond) {
-//              printf("condition 4 row %d col %d ch %d\n", kRow.U, kCol.U, ch.U)
-              regOuts(regOutIdx) := 0.U
-            }
+          when(kRow.S <= prevRow && prevRow < padAmt.S) {
+            regOuts(regOutIdx) := 0.U
+          }
+        }.otherwise {
+          when(padAmt.U <= imRow && imRow < kRow.U) {
+            regOuts(regOutIdx) := 0.U
+          }
+          when(kRow.U <= imRow && imRow < padAmt.U) {
+            regOuts(regOutIdx) := 0.U
           }
         }
       }
     }
-    printf("],\n")
   }
 
   io.dataOut.bits := regOuts
 
   val latency = {
     if (padding)
-      inputCycles * runtimeCycles * imgSize * (kernelSize - (padAmt + 1)) + (kernelSize - (padAmt + 1)) * runtimeCycles * inputCycles + 2
+      inputCycles * runtimeCycles * imgSize * (kernelSize - (padAmt + 1)) + (kernelSize - (padAmt + 1)) * runtimeCycles * inputCycles + 1
     else
       inputCycles * runtimeCycles * imgSize * (kernelSize - 1) + (kernelSize - 1) * runtimeCycles * inputCycles + 1
   }
   println("latency", latency)
   val vld = {
     if (stride == 2 && !padding) {
-      val vldCycPerRow = imgSize / stride
       val rowDelay = !imRow(0) && ShiftRegister(vldIn, 1, false.B, true.B)
       ShiftRegister(!imCol(0) && rowDelay, latency, false.B, true.B)
     } else

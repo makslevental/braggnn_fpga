@@ -23,7 +23,6 @@ class Im2ColTests[T <: Bits](c: Im2Col[T]) extends PeekPokeTester(c) {
     else
       0
   }
-  println(s"padAmt $padAmt")
   var convCounts = 0
   var imgIdx = 0
   var cyc = 0
@@ -36,42 +35,30 @@ class Im2ColTests[T <: Bits](c: Im2Col[T]) extends PeekPokeTester(c) {
     for (i <- 0 until c.channels) {
       val testPix = testImg((imgIdx * c.channels + i) % (c.imgSize * c.imgSize))
       val testValue = (testPix >> (c.dWidth * (inCyc / c.inputCycles))) % (1 << c.dWidth)
-//      println(
-//        s"clock $clock convCounts $convCounts channel $i imgIdx $imgIdx testPix $testPix testValue $testValue"
-//      )
       poke(c.io.dataIn.bits(i), testValue)
     }
     imgIdx += 1
 
     val vldOut = peek(c.io.dataOut.valid) == 1
-//    println(s"vldOut $vldOut")
-//    printArray(
-//      peek(c.io.dataOut.bits)
-//        .grouped(c.channels)
-//        .map(_.toArray)
-//        .grouped(c.kernelSize)
-//        .map(_.toArray)
-//        .toArray,
-//      "bits"
-//    )
     if (vldOut) {
-//      printArray(
-//        peek(c.io.dataOut.bits).grouped(c.kernelSize).toArray,
-//        "dataOut.bits"
-//      )
+      val bits = peek(c.io.dataOut.bits).grouped(c.kernelSize).toArray.map(_.toArray).toArray
+      printArray(
+        bits,
+        "dataOut.bits"
+      )
       for (i <- 0 until c.kernelSize) {
         for (j <- 0 until c.kernelSize) {
           val convYi = convY + c.kernelSize - i - 1
           val convXj = convX + c.kernelSize - j - 1
           if (c.padding && (convYi < 0 || convXj < 0 || convYi >= c.imgSize || convXj >= c.imgSize)) {
-//            for (k <- 0 until c.channels)
-//              expect(c.io.dataOut.bits((i * c.kernelSize + j) * c.channels + k), BigInt(0))
+            for (k <- 0 until c.channels)
+              expect(c.io.dataOut.bits((i * c.kernelSize + j) * c.channels + k), BigInt(0))
           } else {
             val idx = convYi * c.imgSize + convXj
             for (k <- 0 until c.channels) {
-//              val testValue =
-//                (testImg(idx * c.channels + k) >> (cyc * c.outWidth)) % BigInt(1 << c.outWidth)
-//              expect(c.io.dataOut.bits((i * c.kernelSize + j) * c.channels + k), testValue)
+              val testValue =
+                (testImg(idx * c.channels + k) >> (cyc * c.outWidth)) % BigInt(1 << c.outWidth)
+              expect(c.io.dataOut.bits((i * c.kernelSize + j) * c.channels + k), testValue)
             }
           }
         }
@@ -81,11 +68,11 @@ class Im2ColTests[T <: Bits](c: Im2Col[T]) extends PeekPokeTester(c) {
         convX += c.stride
         cyc = 0
       }
-      if (convX >= c.imgSize - 1) {
+      if (convX >= c.imgSize - (-padAmt)) {
         convX = padAmt
         convY += c.stride
       }
-      if (convY >= c.imgSize - 1)
+      if (convY >= c.imgSize - (-padAmt))
         convY = padAmt
       convCounts += 1
     }
