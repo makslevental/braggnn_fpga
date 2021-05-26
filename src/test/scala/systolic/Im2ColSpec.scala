@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
 import myutil.util.{prettyPrint, printArray}
 
+import scala.math
 import scala.util.Random
 
 //noinspection TypeAnnotation
@@ -28,37 +29,36 @@ class Im2ColTests[T <: Bits](c: Im2Col[T]) extends PeekPokeTester(c) {
   var cyc = 0
   var convX = padAmt
   var convY = padAmt
-  var inCyc = 0
+  var inCyc = c.inputCycles
   var clock = 0
   while (convCounts < noConvs) {
     poke(c.io.dataIn.valid, true) // this is almost always in valid?
     for (i <- 0 until c.channels) {
       val testPix = testImg((imgIdx * c.channels + i) % (c.imgSize * c.imgSize))
-      val testValue = (testPix >> (c.dWidth * (inCyc / c.inputCycles))) % (1 << c.dWidth)
-      poke(c.io.dataIn.bits(i), testValue)
+      poke(c.io.dataIn.bits(i), testPix)
     }
     imgIdx += 1
 
     val vldOut = peek(c.io.dataOut.valid) == 1
     if (vldOut) {
-      val bits = peek(c.io.dataOut.bits).grouped(c.kernelSize).toArray.map(_.toArray).toArray
-      printArray(
-        bits,
-        "dataOut.bits"
-      )
+//      val bits = peek(c.io.dataOut.bits).grouped(c.kernelSize).toArray.map(_.toArray).toArray
+//      printArray(
+//        bits,
+//        "dataOut.bits"
+//      )
       for (i <- 0 until c.kernelSize) {
         for (j <- 0 until c.kernelSize) {
           val convYi = convY + c.kernelSize - i - 1
           val convXj = convX + c.kernelSize - j - 1
           if (c.padding && (convYi < 0 || convXj < 0 || convYi >= c.imgSize || convXj >= c.imgSize)) {
             for (k <- 0 until c.channels)
-              expect(c.io.dataOut.bits((i * c.kernelSize + j) * c.channels + k), BigInt(0))
+              require(expect(c.io.dataOut.bits((i * c.kernelSize + j) * c.channels + k), BigInt(0)))
           } else {
             val idx = convYi * c.imgSize + convXj
             for (k <- 0 until c.channels) {
               val testValue =
-                (testImg(idx * c.channels + k) >> (cyc * c.outWidth)) % BigInt(1 << c.outWidth)
-              expect(c.io.dataOut.bits((i * c.kernelSize + j) * c.channels + k), testValue)
+                testImg(idx * c.channels + k) >> (cyc * c.outWidth)
+              require(expect(c.io.dataOut.bits((i * c.kernelSize + j) * c.channels + k), testValue))
             }
           }
         }
@@ -83,37 +83,39 @@ class Im2ColTests[T <: Bits](c: Im2Col[T]) extends PeekPokeTester(c) {
 
 class Im2ColSpec extends ChiselFlatSpec {
   behavior.of("Im2Col")
-  val inChannels = 1
   val qSize = 15
-  val kernelSize = 5
   val stride = 1
-  val imgSize = 16
   val padding = true
   val fifo = true
   val dWidth = 16
   val throughput = 1
   val inputCycle = 1
-  println(
-//    s"imgSize = $imgSize inChannels = $inChannels kernelSize = $kernelSize qSize = $qSize " +
-//      s"stride = $stride padding = $padding throughput = $throughput fifo = $fifo"
-  )
-  Driver(
-    () => {
-      new Im2Col(
-        UInt(dWidth.W),
-        imgSize,
-        inChannels,
-        kernelSize,
-        qSize,
-        stride,
-        padding,
-        throughput,
-        inputCycle,
-        fifo = fifo
-      )
-    },
-    "treadle",
-    verbose = false
-  )(c => new Im2ColTests(c))
+  for (inChannels <- 1 until 3) {
+    for (kernelSize <- 1 until 4) {
+      for (imgSize <- 4 until 7) {
+        println(s"imgSize = ${math.pow(2, imgSize)} inChannels = $inChannels kernelSize = ${2 * kernelSize + 1}")
+        Driver(
+          () => {
+            new Im2Col(
+              UInt(dWidth.W),
+              math.pow(2, imgSize).toInt,
+              inChannels,
+              2 * kernelSize + 1,
+              qSize,
+              stride,
+              padding,
+              throughput,
+              inputCycle,
+              fifo = fifo
+            )
+          },
+          "treadle",
+          verbose = false
+        )(c => new Im2ColTests(c))
+
+      }
+
+    }
+  }
 
 }

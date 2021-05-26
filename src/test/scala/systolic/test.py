@@ -98,3 +98,45 @@ for i, outs in enumerate(outputs):
             print(i, "false", imRowIdx, imColIdx)
             print("***********************")
 
+
+
+# if (imColIdx - 1) % imgSize == imgSize - 1 or (imColIdx - 2) % imgSize == imgSize - 1:
+#     colWrap = True
+# else:
+#     colWrap = False
+#
+# if (imRowIdx - 1) % imgSize == imgSize - 1 or (imRowIdx - 2) % imgSize == imgSize - 1:
+#     rowWrap = True
+# else:
+#     rowWrap = False
+#
+# regOuts = np.zeros(kernelSize * kernelSize)
+#
+# for kRowIdx in range(0, kernelSize):
+#     for kColIdx in range(0, kernelSize):
+#         ch = 0
+#         outsIdx = kRowIdx * kernelSize + kColIdx
+#         outAtRowColCh = outs[outsIdx]
+#         regOutIdx = outsIdx * channels + ch
+#         regOuts[regOutIdx] = outAtRowColCh
+#
+#         # left condition
+#         if padAmt <= imColIdx < kernelSize and kColIdx > imColIdx:
+#             regOuts[regOutIdx] = 0
+#         # wrap from right to left condition
+#         if colWrap:
+#             if imColIdx < padAmt and kColIdx <= imColIdx:
+#                 regOuts[regOutIdx] = 0
+#             # if colWrap act like the previous row!!!!
+#             if padAmt <= imRowIdx - 1 < kernelSize and kRowIdx > imRowIdx - 1:
+#                 regOuts[regOutIdx] = 0
+#
+#             if imRowIdx - 1 < padAmt and kRowIdx <= imRowIdx - 1:
+#                 regOuts[regOutIdx] = 0
+#
+#         else:
+#             if padAmt <= imRowIdx < kernelSize and kRowIdx > imRowIdx:
+#                 regOuts[regOutIdx] = 0
+#             # wrap from bottom to top
+#             if rowWrap and imRowIdx < padAmt and kRowIdx <= imRowIdx:
+#                 regOuts[regOutIdx] = 0
