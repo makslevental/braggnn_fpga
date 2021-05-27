@@ -90,7 +90,7 @@ class Im2ColSpec extends ChiselFlatSpec {
   val dWidth = 16
   val throughput = 1
   val inputCycle = 1
-  for (inChannels <- 1 until 3) {
+  for (inChannels <- 1 to 3) {
     for (kernelSize <- 1 until 4) {
       for (imgSize <- 4 until 7) {
         println(s"imgSize = ${math.pow(2, imgSize)} inChannels = $inChannels kernelSize = ${2 * kernelSize + 1}")

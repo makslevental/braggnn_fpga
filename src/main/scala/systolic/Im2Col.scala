@@ -1,7 +1,9 @@
+// originally from https://github.com/da-steve101/binary_connect_cifar
 package systolic
 
 import Chisel.{Counter, Queue, ShiftRegister, Valid}
 import chisel3._
+import chisel3.stage.ChiselStage
 import chisel3.util.{log2Ceil, Decoupled}
 
 import scala.collection.mutable.ArrayBuffer
@@ -136,4 +138,33 @@ class Im2Col[T <: Bits](
     inputCycles * runtimeCycles * imgSize * (kernelSize - (padAmt + 1)) + (kernelSize - (padAmt + 1)) * runtimeCycles * inputCycles + 1
   val vld = ShiftRegister(vldIn, latency, false.B, true.B)
   io.dataOut.valid := vld
+}
+
+object Im2Col extends App {
+  val qSize = 15
+  val stride = 1
+  val padding = true
+  val fifo = true
+  val dWidth = 16
+  val throughput = 1
+  val inputCycle = 1
+  val imgSize = 32
+  val inChannels = 1
+  val kernelWidth = 3
+
+  (new ChiselStage).emitVerilog(
+    new Im2Col(
+      UInt(dWidth.W),
+      32,
+      inChannels,
+      2 * kernelWidth + 1,
+      qSize,
+      stride,
+      padding,
+      throughput,
+      inputCycle,
+      fifo = fifo
+    ),
+    args
+  )
 }

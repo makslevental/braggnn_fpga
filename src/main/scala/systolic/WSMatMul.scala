@@ -6,8 +6,8 @@ import chisel3.stage.ChiselStage
 //noinspection TypeAnnotation
 class WSMatMul(rows: Int, cols: Int, bitWidth: Int = 8) extends Module {
   val io = IO(new Bundle {
-    val A   = Input(Vec(rows, Vec(cols, UInt(bitWidth.W))))
-    val B   = Input(Vec(cols, UInt(bitWidth.W)))
+    val A = Input(Vec(rows, Vec(cols, UInt(bitWidth.W))))
+    val B = Input(Vec(cols, UInt(bitWidth.W)))
     val out = Output(Vec(rows, UInt((2 * bitWidth).W)))
   })
 
@@ -29,11 +29,11 @@ class WSMatMul(rows: Int, cols: Int, bitWidth: Int = 8) extends Module {
       pElems(row)(col).inW := io.A(row)(col)
       // wiring up PEs
       // horizontal inputs
-      if (col == 0) pElems(row)(col).inPS := 0.U
-      else pElems(row)(col).inPS := hWires(row)(col - 1)
+      if (col == 0) pElems(row)(col).inPartialSum := 0.U
+      else pElems(row)(col).inPartialSum := hWires(row)(col - 1)
 
       // horizontal outputs to next PEs
-      if (col < cols - 1) hWires(row)(col) := pElems(row)(col).outPS
+      if (col < cols - 1) hWires(row)(col) := pElems(row)(col).outPartialSum
 
       // vertical inputs
       if (row == 0) pElems(row)(col).inV := io.B(col)
@@ -42,11 +42,13 @@ class WSMatMul(rows: Int, cols: Int, bitWidth: Int = 8) extends Module {
       // vertical outputs to next PEs
       if (row < rows - 1) vWires(row)(col) := pElems(row)(col).outV
     }
-    io.out(row) := pElems(row).last.outPS // results
+    io.out(row) := pElems(row).last.outPartialSum // results
   }
 
 }
 
 object WSMatMul extends App {
-  (new ChiselStage).emitVerilog(new WSMatMul(2, 2))
+  val rows = 4
+  val cols = 4
+  (new ChiselStage).emitVerilog(new WSMatMul(rows, cols), args)
 }

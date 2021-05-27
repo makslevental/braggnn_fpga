@@ -1,4 +1,4 @@
-// See LICENSE for license details.
+// originally from https://github.com/da-steve101/binary_connect_cifar
 
 package systolic
 
@@ -28,22 +28,22 @@ object MemShiftRegister {
 //noinspection TypeAnnotation
 class MemShiftRegister[T <: Data](genType: T, val n: Int) extends Module {
   val io = IO(new Bundle {
-    val in  = Input(genType.cloneType)
-    val en  = Input(Bool())
+    val in = Input(genType.cloneType)
+    val en = Input(Bool())
     val out = Output(genType.cloneType)
   })
 
   // if genType is a vec then aggregate bits to UInt
   val grpedVec: Vec[Bits] = io.in.asInstanceOf[Vec[Bits]]
-  val uintVec             = grpedVec.map(_.asUInt()).reduce(_ ## _)
-  val bitWidth            = uintVec.getWidth / grpedVec.size
+  val uintVec = grpedVec.map(_.asUInt()).reduce(_ ## _)
+  val bitWidth = uintVec.getWidth / grpedVec.size
 
   if (n <= 3) {
     io.out := ShiftRegister(io.in, n, io.en)
   } else {
     val myMem = Mem(n, uintVec.cloneType)
 
-    val cntr     = Counter(io.en, n)
+    val cntr = Counter(io.en, n)
     val readAddr = Wire(UInt(cntr._1.getWidth.W + 1.W))
 
     readAddr := cntr._1
