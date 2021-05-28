@@ -2,6 +2,7 @@ package matmul
 
 import chisel3._
 import chisel3.experimental.FixedPoint
+import chisel3.stage.ChiselStage
 import chisel3.util.{isPow2, log2Ceil}
 
 import scala.math.pow
@@ -196,4 +197,10 @@ class ComplexMatrixMatrixProduct(N: Int, M: Int, R: Int, bitWidth: Int) extends 
       io.out.data(j)(i) := matVecMul(i).io.out(j)
     }
   }
+}
+
+object ComplexMatrixMatrixProduct extends App {
+  val rows = 4
+  val cols = 4
+  (new ChiselStage).emitVerilog(new ComplexMatrixMatrixProduct(rows, cols, rows, 32), args)
 }

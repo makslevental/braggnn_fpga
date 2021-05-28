@@ -344,7 +344,14 @@ object util {
     // contract                         matrix n                        real/imag
     val which_matrix = """.?(\d*)_(\w*)\.csv""".r
 
-    for (contraction_dir <- os.list(Path(dir)).filter(os.isDir(_))) {
+    for (
+      contraction_dir <- os
+        .list(Path(dir))
+        .filterNot(_.toString().contains("venv"))
+        .filterNot(_.toString().contains("quimb"))
+        .filterNot(_.toString().contains("cotengra"))
+        .filter(os.isDir(_))
+    ) {
       val contr = contraction_dir.segments.toList(6).split("-")(1)
       val contr_matrices = collection.mutable.Map[Int, collection.mutable.Map[String, DenseMatrix[Double]]]()
       for (contraction_csv <- os.walk(contraction_dir)) {

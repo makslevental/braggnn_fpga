@@ -53,54 +53,54 @@ class ComplexMatrixMultSpec extends FlatSpec with ChiselScalatestTester with Mat
   val vecDim = 8
   val bitWidth = 32
 
-  it should "should compute complex square matrix matrix product" in {
-    test(new ComplexMatrixMatrixProduct(N, N, N, bitWidth)).withAnnotations(Seq(VerilatorBackendAnnotation)) { c =>
-      for (_ <- 0 until repeats) {
-        // generate data based on bits
-        val AGen = new RandomVector(N, bitWidth)
-        val BGen = new RandomVector(N, bitWidth)
-        val inA = Array.fill(N) {
-          AGen.smallpos
-        }
-        val inB = Array.fill(N) {
-          BGen.smallpos
-        }
-        val res = matMatMult(inA, inB)
-
-        for (i <- 0 until N) {
-          for (j <- 0 until N) {
-            val c1 = new Complex(bitWidth)
-            c1.real = inA(i)(j).F(bitWidth.W, 4.BP)
-            c1.imag = 0.F(bitWidth.W, 0.BP)
-            val c2 = new Complex(bitWidth)
-            c2.real = inB(i)(j).F(bitWidth.W, 4.BP)
-            c2.imag = 0.F(bitWidth.W, 0.BP)
-            c.io.A.data(i)(j).real.poke(inA(i)(j).F(bitWidth.W, 4.BP))
-            c.io.A.data(i)(j).imag.poke(0.F(bitWidth.W, 4.BP))
-            c.io.B.data(i)(j).real.poke(inB(i)(j).F(bitWidth.W, 4.BP))
-            c.io.B.data(i)(j).imag.poke(0.F(bitWidth.W, 4.BP))
-          }
-        }
-
-        println()
-        c.clock.step(1)
-        c.clock.step(1)
-
-        for (i <- 0 until N) {
-          for (j <- 0 until N) {
-//            val c3 = new Complex(res(i)(j).F(bitWidth.W, 4.BP), 0.F(bitWidth.W, 0.BP))
-            val c3 = new Complex(bitWidth)
-            c3.real = res(i)(j).F(bitWidth.W, 4.BP)
-            c3.imag = 0.F(bitWidth.W, 0.BP)
-            c.io.out.data(i)(j).real.expect(res(i)(j).F(bitWidth.W, 4.BP))
-            c.io.out.data(i)(j).imag.expect(0.F(bitWidth.W, 4.BP))
-            //                        print(s"${c.io.out.data(i)(j).peek().litValue()}, ")
-          }
-          println()
-        }
-      }
-    }
-  }
+//  it should "should compute complex square matrix matrix product" in {
+//    test(new ComplexMatrixMatrixProduct(N, N, N, bitWidth)).withAnnotations(Seq(VerilatorBackendAnnotation)) { c =>
+//      for (_ <- 0 until repeats) {
+//        // generate data based on bits
+//        val AGen = new RandomVector(N, bitWidth)
+//        val BGen = new RandomVector(N, bitWidth)
+//        val inA = Array.fill(N) {
+//          AGen.smallpos
+//        }
+//        val inB = Array.fill(N) {
+//          BGen.smallpos
+//        }
+//        val res = matMatMult(inA, inB)
+//
+//        for (i <- 0 until N) {
+//          for (j <- 0 until N) {
+//            val c1 = new Complex(bitWidth)
+//            c1.real = inA(i)(j).F(bitWidth.W, 4.BP)
+//            c1.imag = 0.F(bitWidth.W, 0.BP)
+//            val c2 = new Complex(bitWidth)
+//            c2.real = inB(i)(j).F(bitWidth.W, 4.BP)
+//            c2.imag = 0.F(bitWidth.W, 0.BP)
+//            c.io.A.data(i)(j).real.poke(inA(i)(j).F(bitWidth.W, 4.BP))
+//            c.io.A.data(i)(j).imag.poke(0.F(bitWidth.W, 4.BP))
+//            c.io.B.data(i)(j).real.poke(inB(i)(j).F(bitWidth.W, 4.BP))
+//            c.io.B.data(i)(j).imag.poke(0.F(bitWidth.W, 4.BP))
+//          }
+//        }
+//
+//        println()
+//        c.clock.step(1)
+//        c.clock.step(1)
+//
+//        for (i <- 0 until N) {
+//          for (j <- 0 until N) {
+////            val c3 = new Complex(res(i)(j).F(bitWidth.W, 4.BP), 0.F(bitWidth.W, 0.BP))
+//            val c3 = new Complex(bitWidth)
+//            c3.real = res(i)(j).F(bitWidth.W, 4.BP)
+//            c3.imag = 0.F(bitWidth.W, 0.BP)
+//            c.io.out.data(i)(j).real.expect(res(i)(j).F(bitWidth.W, 4.BP))
+//            c.io.out.data(i)(j).imag.expect(0.F(bitWidth.W, 4.BP))
+//            //                        print(s"${c.io.out.data(i)(j).peek().litValue()}, ")
+//          }
+//          println()
+//        }
+//      }
+//    }
+//  }
 
   it should "should compute qubit matrices" in {
     val fps = "/Users/maksim/dev_projects/CMSC32900/scratch/matrix_csvs"
@@ -160,59 +160,59 @@ class ComplexMatrixMultSpec extends FlatSpec with ChiselScalatestTester with Mat
 
 }
 
-class ComplexSIntMatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-  behavior.of("MatrixMult")
-
-  val N = 16
-  val M = 8
-  val R = 4
-  val repeats = 5
-  val vecDim = 8
-  val bitWidth = 32
-
-  it should "should compute complex square matrix matrix product" in {
-    test(new ComplexSIntMatrixMatrixProduct(N, N, N, bitWidth)) { c =>
-      for (_ <- 0 until repeats) {
-        // generate data based on bits
-        val AGen = new RandomVector(N, bitWidth)
-        val BGen = new RandomVector(N, bitWidth)
-        val inA = Array.fill(N) {
-          AGen.smallpos
-        }
-        val inB = Array.fill(N) {
-          BGen.smallpos
-        }
-        val res = matMatMult(inA, inB)
-
-        for (i <- 0 until N) {
-          for (j <- 0 until N) {
-            val c1 = new ComplexSInt(bitWidth)
-            c1.real = inA(i)(j).asSInt()
-            c1.imag = 0.S
-            val c2 = new ComplexSInt(bitWidth)
-            c2.real = inB(i)(j).asSInt()
-            c2.imag = 0.S
-            c.io.A.data(i)(j).real.poke(inA(i)(j).asSInt())
-            c.io.A.data(i)(j).imag.poke(0.S)
-            c.io.B.data(i)(j).real.poke(inB(i)(j).asSInt())
-            c.io.B.data(i)(j).imag.poke(0.S)
-          }
-        }
-
-        println()
-        c.clock.step(1)
-        c.clock.step(1)
-
-        for (i <- 0 until N) {
-          for (j <- 0 until N) {
-            val c3 = new ComplexSInt(bitWidth)
-            c3.real = res(i)(j).asSInt()
-            c3.imag = 0.S
-            c.io.out.data(i)(j).real.expect(res(i)(j).asSInt())
-            c.io.out.data(i)(j).imag.expect(0.S)
-          }
-        }
-      }
-    }
-  }
-}
+//class ComplexSIntMatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
+//  behavior.of("MatrixMult")
+//
+//  val N = 16
+//  val M = 8
+//  val R = 4
+//  val repeats = 5
+//  val vecDim = 8
+//  val bitWidth = 32
+//
+//  it should "should compute complex square matrix matrix product" in {
+//    test(new ComplexSIntMatrixMatrixProduct(N, N, N, bitWidth)) { c =>
+//      for (_ <- 0 until repeats) {
+//        // generate data based on bits
+//        val AGen = new RandomVector(N, bitWidth)
+//        val BGen = new RandomVector(N, bitWidth)
+//        val inA = Array.fill(N) {
+//          AGen.smallpos
+//        }
+//        val inB = Array.fill(N) {
+//          BGen.smallpos
+//        }
+//        val res = matMatMult(inA, inB)
+//
+//        for (i <- 0 until N) {
+//          for (j <- 0 until N) {
+//            val c1 = new ComplexSInt(bitWidth)
+//            c1.real = inA(i)(j).asSInt()
+//            c1.imag = 0.S
+//            val c2 = new ComplexSInt(bitWidth)
+//            c2.real = inB(i)(j).asSInt()
+//            c2.imag = 0.S
+//            c.io.A.data(i)(j).real.poke(inA(i)(j).asSInt())
+//            c.io.A.data(i)(j).imag.poke(0.S)
+//            c.io.B.data(i)(j).real.poke(inB(i)(j).asSInt())
+//            c.io.B.data(i)(j).imag.poke(0.S)
+//          }
+//        }
+//
+//        println()
+//        c.clock.step(1)
+//        c.clock.step(1)
+//
+//        for (i <- 0 until N) {
+//          for (j <- 0 until N) {
+//            val c3 = new ComplexSInt(bitWidth)
+//            c3.real = res(i)(j).asSInt()
+//            c3.imag = 0.S
+//            c.io.out.data(i)(j).real.expect(res(i)(j).asSInt())
+//            c.io.out.data(i)(j).imag.expect(0.S)
+//          }
+//        }
+//      }
+//    }
+//  }
+//}
