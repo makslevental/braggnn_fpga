@@ -1,14 +1,22 @@
 package myutil
 
+import breeze.linalg.{csvread, DenseMatrix}
+import os.Path
+
+import java.io.File
+import scala.collection.mutable
 import scala.math.pow
-import scala.reflect.runtime.currentMirror
-import scala.reflect.runtime.{universe => ru}
+import scala.reflect.ClassTag
+import scala.reflect.runtime.{currentMirror, universe => ru}
 import scala.sys.process._
 import scala.tools.reflect.ToolBox
 import scala.util.Random
-import scala.reflect.ClassTag
 
 object util {
+  type Img = Array[Array[Array[Double]]]
+  type Kernel = Array[Array[Array[Array[Double]]]]
+  type Output = Array[Array[Array[Double]]]
+
   def matMatMult(
     A: Array[Array[Int]],
     B: Array[Array[Int]]
@@ -32,123 +40,6 @@ object util {
       res(i) = dot * pow(2, shift).toInt
     }
     res
-  }
-
-  def conv[T](
-    img:    Array[Array[Array[T]]],
-    kernel: Array[Array[Array[Array[T]]]]
-  )(
-    implicit n: Numeric[T]
-  ): Array[Array[Array[Double]]] = {
-    import n._
-
-    val imChannels = img.length
-    val imHeight = img.head.length
-    val imWidth = img.head.head.length
-
-    val nFilters = kernel.length
-    require(kernel.head.length == imChannels)
-    val kHeight = kernel.head.head.length
-    val kWidth = kernel.head.head.head.length
-
-    val outputHeight = imHeight - kHeight + 1
-    val outputWidth = imWidth - kWidth + 1
-
-    val out = Array.fill(nFilters, outputHeight, outputWidth)(0.0)
-
-    for (f <- 0 until nFilters) {
-      for (c <- 0 until imChannels) {
-        for (oH <- 0 until outputHeight) {
-          for (oW <- 0 until outputWidth) {
-            for (kH <- 0 until kHeight) {
-              for (kW <- 0 until kWidth) {
-                out(f)(oH)(oW) += kernel(f)(c)(kH)(kW).toDouble * img(c)(oH + kH)(oW + kW).toDouble
-              }
-            }
-          }
-        }
-      }
-    }
-    out
-  }
-
-  def im2col[T](
-    img:    Array[Array[Array[T]]],
-    kernel: Array[Array[Array[Array[T]]]]
-  )(
-    implicit n: Numeric[T],
-    c:          ClassTag[T]
-  ): (Array[Array[T]], Array[Array[T]]) = {
-    import n._
-
-    val nFilters = kernel.length
-    val kHeight = kernel.head.head.length
-    val kWidth = kernel.head.head.head.length
-    val imChannels = img.length
-    val imHeight = img.head.length
-    val imWidth = img.head.head.length
-
-    val kMatrixRows = nFilters
-    val kMatrixCols = kHeight * kWidth * imChannels
-
-    val nKernelPositions = (imHeight - kHeight + 1) * (imWidth - kWidth + 1)
-
-    val imMatrixRows = kHeight * kWidth * imChannels
-    val imMatrixCols = nKernelPositions
-
-    val imPatches = for {
-      channel <- img
-      rows <- channel.sliding(kHeight, 1)
-      patch <- rows.transpose.sliding(kWidth, 1)
-    } yield patch.transpose.flatten
-
-    val imMatrix =
-      imPatches.grouped(imPatches.length / imChannels).map(_.transpose).toArray.flatten
-
-    require(imMatrix.length == imMatrixRows && imMatrix.head.length == imMatrixCols)
-
-    var kMatrix = for {
-      filterBank <- kernel
-      channel <- filterBank
-    } yield channel.flatten
-
-    kMatrix = kMatrix.grouped(kMatrix.length / nFilters).map(_.flatten).toArray
-
-    require(kMatrix.length == kMatrixRows && kMatrix.head.length == kMatrixCols)
-
-    (imMatrix, kMatrix)
-  }
-
-  def printArray[T](arr: Array[T], name: String = "arr"): Unit = {
-    println(s"$name: ${arr.deep}".replace("Array(", "\n[").replace(")", "]"))
-  }
-
-  class RandomVector(val len: Int, val bits: Int) {
-    val r = new Random
-    if (bits < 1) throw new IllegalArgumentException("bits should be greater than 1")
-
-    def any: Array[Int] = {
-      Array.fill(len) { r.nextInt(pow(2, bits).toInt) - pow(2, bits - 1).toInt }
-    }
-
-    def positive: Array[Int] = {
-      Array.fill(len) { r.nextInt(pow(2, bits - 1).toInt) }
-    }
-
-    def negative: Array[Int] = {
-      Array.fill(len) { 0 - r.nextInt(pow(2, bits - 1).toInt) }
-    }
-
-    def smallpos: Array[Int] = {
-      Array.fill(len) { r.nextInt(10) }
-    }
-  }
-
-  object helper {
-    def getMask(bits: Int): Long = {
-      if (bits <= 0) throw new IllegalArgumentException("bits should be greater than 0")
-      (pow(2, bits) - 1).toLong
-    }
   }
 
   /** Pretty prints a Scala value similar to its source represention.
@@ -219,14 +110,6 @@ object util {
     }
   }
 
-}
-
-//noinspection TypeAnnotation
-object HelloWorld {
-  def main(args: Array[String]): Unit = {
-    testIm2Col()
-  }
-
   def testIm2Col(): Unit = {
     val imChannels = 3
     val imHeight = 3
@@ -250,6 +133,56 @@ object HelloWorld {
     util.im2col(img, kernel)
   }
 
+  def im2col[T](
+    img:    Array[Array[Array[T]]],
+    kernel: Array[Array[Array[Array[T]]]]
+  )(
+    implicit n: Numeric[T],
+    c:          ClassTag[T]
+  ): (Array[Array[T]], Array[Array[T]]) = {
+
+    val nFilters = kernel.length
+    val kHeight = kernel.head.head.length
+    val kWidth = kernel.head.head.head.length
+    val imChannels = img.length
+    val imHeight = img.head.length
+    val imWidth = img.head.head.length
+
+    val kMatrixRows = nFilters
+    val kMatrixCols = kHeight * kWidth * imChannels
+
+    val nKernelPositions = (imHeight - kHeight + 1) * (imWidth - kWidth + 1)
+
+    val imMatrixRows = kHeight * kWidth * imChannels
+    val imMatrixCols = nKernelPositions
+
+    val imPatches = for {
+      channel <- img
+      rows <- channel.sliding(kHeight, 1)
+      patch <- rows.transpose.sliding(kWidth, 1)
+    } yield patch.transpose.flatten
+
+    val imMatrix =
+      imPatches.grouped(imPatches.length / imChannels).map(_.transpose).toArray.flatten
+
+    require(imMatrix.length == imMatrixRows && imMatrix.head.length == imMatrixCols)
+
+    var kMatrix = for {
+      filterBank <- kernel
+      channel <- filterBank
+    } yield channel.flatten
+
+    kMatrix = kMatrix.grouped(kMatrix.length / nFilters).map(_.flatten).toArray
+
+    require(kMatrix.length == kMatrixRows && kMatrix.head.length == kMatrixCols)
+
+    (imMatrix, kMatrix)
+  }
+
+  def printArray[T](arr: Array[T], name: String = "arr"): Unit = {
+    println(s"$name: ${arr.deep}".replace("Array(", "\n[").replace(")", "]"))
+  }
+
   def testConv(): Unit = {
     val repeats = 10
     for (i <- 0 until repeats) {
@@ -263,15 +196,47 @@ object HelloWorld {
     }
   }
 
+  def conv[T](
+    img:    Array[Array[Array[T]]],
+    kernel: Array[Array[Array[Array[T]]]]
+  )(
+    implicit n: Numeric[T]
+  ): Array[Array[Array[Double]]] = {
+    import n._
+
+    val imChannels = img.length
+    val imHeight = img.head.length
+    val imWidth = img.head.head.length
+
+    val nFilters = kernel.length
+    require(kernel.head.length == imChannels)
+    val kHeight = kernel.head.head.length
+    val kWidth = kernel.head.head.head.length
+
+    val outputHeight = imHeight - kHeight + 1
+    val outputWidth = imWidth - kWidth + 1
+
+    val out = Array.fill(nFilters, outputHeight, outputWidth)(0.0)
+
+    for (f <- 0 until nFilters) {
+      for (c <- 0 until imChannels) {
+        for (oH <- 0 until outputHeight) {
+          for (oW <- 0 until outputWidth) {
+            for (kH <- 0 until kHeight) {
+              for (kW <- 0 until kWidth) {
+                out(f)(oH)(oW) += kernel(f)(c)(kH)(kW).toDouble * img(c)(oH + kH)(oW + kW).toDouble
+              }
+            }
+          }
+        }
+      }
+    }
+    out
+  }
+
   def ~=(x: Double, y: Double, precision: Double): Boolean = {
     if ((x - y).abs < precision) true else false
   }
-
-  def getTypeTag[T: ru.TypeTag](obj: T) = ru.typeTag[T]
-
-  type Img = Array[Array[Array[Double]]]
-  type Kernel = Array[Array[Array[Array[Double]]]]
-  type Output = Array[Array[Array[Double]]]
 
   def callPythonToMakeTensors(): (Img, Kernel, Output) = {
     val code =
@@ -364,6 +329,76 @@ object HelloWorld {
     stdoutWriter.close()
     stderrWriter.close()
     (exitValue, stdoutStream.toString, stderrStream.toString)
+  }
+
+  def getTypeTag[T: ru.TypeTag](obj: T): ru.TypeTag[T] = ru.typeTag[T]
+
+  def main(args: Array[String]): Unit = {
+    val fps = "/Users/maksim/dev_projects/CMSC32900/scratch/matrix_csvs"
+    println(readCsvMatrices(fps))
+  }
+
+  def readCsvMatrices(dir: String): mutable.Map[String, mutable.Map[Int, mutable.Map[String, DenseMatrix[Double]]]] = {
+    val matrices = collection.mutable
+      .Map[String, collection.mutable.Map[Int, collection.mutable.Map[String, DenseMatrix[Double]]]]()
+    // contract                         matrix n                        real/imag
+    val which_matrix = """.?(\d*)_(\w*)\.csv""".r
+
+    for (contraction_dir <- os.list(Path(dir)).filter(os.isDir(_))) {
+      val contr = contraction_dir.segments.toList(6).split("-")(1)
+      val contr_matrices = collection.mutable.Map[Int, collection.mutable.Map[String, DenseMatrix[Double]]]()
+      for (contraction_csv <- os.walk(contraction_dir)) {
+        val n_real_imag = which_matrix
+          .findAllIn(contraction_csv.toString())
+          .matchData
+          .map { m =>
+            (m.group(1), m.group(2))
+          }
+          .toList
+
+        require(n_real_imag.length == 1)
+        val (n, real_imag) = n_real_imag.head
+        val matrix = csvread(new File(contraction_csv.toString()), ',')
+
+        val contr_matrix = contr_matrices.getOrElseUpdate(
+          n.toInt,
+          collection.mutable.Map[String, DenseMatrix[Double]]((real_imag, matrix))
+        )
+
+        contr_matrix.update(real_imag, matrix)
+      }
+      matrices.update(contr, contr_matrices)
+    }
+
+    matrices
+  }
+
+  class RandomVector(val len: Int, val bits: Int) {
+    val r = new Random
+    if (bits < 1) throw new IllegalArgumentException("bits should be greater than 1")
+
+    def any: Array[Int] = {
+      Array.fill(len) { r.nextInt(pow(2, bits).toInt) - pow(2, bits - 1).toInt }
+    }
+
+    def positive: Array[Int] = {
+      Array.fill(len) { r.nextInt(pow(2, bits - 1).toInt) }
+    }
+
+    def negative: Array[Int] = {
+      Array.fill(len) { 0 - r.nextInt(pow(2, bits - 1).toInt) }
+    }
+
+    def smallpos: Array[Int] = {
+      Array.fill(len) { r.nextInt(10) }
+    }
+  }
+
+  object helper {
+    def getMask(bits: Int): Long = {
+      if (bits <= 0) throw new IllegalArgumentException("bits should be greater than 0")
+      (pow(2, bits) - 1).toLong
+    }
   }
 
 }
