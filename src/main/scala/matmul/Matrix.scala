@@ -10,8 +10,8 @@ class DotProduct(bitWidth: Int = 8, size: Int = 16) extends Module {
     s"\n\n[VTA] [DotProduct] size must be greater than 4 and a power of 2\n\n"
   require(size >= 2 && isPow2(size), errorMsg)
 
-  val macs    = Seq.fill(size)(Module(new MAC(bitWidth, cBits = 1))) // # of total vector pairs
-  val summer  = Module(new LogSum(macs.head.outBits, size))
+  val macs = Seq.fill(size)(Module(new MAC(bitWidth, cBits = 1))) // # of total vector pairs
+  val summer = Module(new LogSum(macs.head.outBits, size))
   val outBits = summer.outBits
   val io = IO(new Bundle {
     val a = Input(Vec(size, SInt(bitWidth.W)))
@@ -35,7 +35,7 @@ class Matrix(rows: Int, cols: Int, bitWidth: Int) extends Bundle {
 
 class Valid[+T <: Data](gen: T) extends Bundle {
   val valid: Bool = Output(Bool())
-  val data: T     = Output(gen)
+  val data:  T = Output(gen)
 
   override def cloneType: this.type = Valid(gen).asInstanceOf[this.type]
 }
@@ -69,8 +69,8 @@ class MatrixVectorProduct(rows: Int, cols: Int, bitWidth: Int) extends Module {
 class MatrixMatrixProduct(N: Int, M: Int, R: Int, bitWidth: Int) extends Module {
   val io = IO(new Bundle {
     // out = A * B
-    val A   = Input(new Matrix(N, M, bitWidth))
-    val B   = Input(new Matrix(M, R, bitWidth))
+    val A = Input(new Matrix(N, M, bitWidth))
+    val B = Input(new Matrix(M, R, bitWidth))
     val out = Output(new Matrix(N, R, bitWidth))
   })
 
@@ -89,8 +89,8 @@ class MatrixMatrixProduct(N: Int, M: Int, R: Int, bitWidth: Int) extends Module 
 
 //noinspection TypeAnnotation
 class FrobeniusInnerProduct(rows: Int, cols: Int, bitWidth: Int) extends Module {
-  val dot: Seq[DotProduct] = Seq.fill(rows)(Module(new DotProduct(bitWidth, cols)))
-  val summer: LogSum       = Module(new LogSum(dot.head.outBits, rows))
+  val dot:    Seq[DotProduct] = Seq.fill(rows)(Module(new DotProduct(bitWidth, cols)))
+  val summer: LogSum = Module(new LogSum(dot.head.outBits, rows))
 
   val io = IO(new Bundle {
     val A = Input(new Matrix(rows, cols, bitWidth))

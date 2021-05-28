@@ -19,27 +19,27 @@ class WSSpec extends FlatSpec with ChiselScalatestTester with Matchers {
     test(new WSProcElem(bitWidth)) { c =>
       for (_ <- 0 until repeats) {
         // 1 + 2*3 = 7
-        c.io.inPS.poke(1.U)
+        c.io.inPartialSum.poke(1.U)
         c.io.inW.poke(2.U)
         c.io.inV.poke(3.U)
 
         c.clock.step()
 
         c.io.outV.expect(3.U)
-        c.io.outPS.expect(7.U)
+        c.io.outPartialSum.expect(7.U)
 
         c.reset.poke(true.B)
         c.clock.step()
         c.reset.poke(false.B)
 
         // 2 + 3*4 = 14
-        c.io.inPS.poke(2.U)
+        c.io.inPartialSum.poke(2.U)
         c.io.inW.poke(3.U)
         c.io.inV.poke(4.U)
 
         c.clock.step()
 
-        c.io.outPS.expect(14.U)
+        c.io.outPartialSum.expect(14.U)
         c.io.outV.expect(4.U)
       }
     }
