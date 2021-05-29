@@ -12,29 +12,29 @@ module OSProcElem(
   reg [31:0] _RAND_1;
   reg [31:0] _RAND_2;
 `endif // RANDOMIZE_REG_INIT
-  reg [31:0] res; // @[OSProcElem.scala 15:21]
-  reg [15:0] hreg; // @[OSProcElem.scala 16:21]
-  reg [15:0] vreg; // @[OSProcElem.scala 17:21]
-  wire [31:0] _res_T = io_inH * io_inV; // @[OSProcElem.scala 20:24]
-  wire [31:0] _res_T_2 = res + _res_T; // @[OSProcElem.scala 20:14]
-  assign io_outH = {{16'd0}, hreg}; // @[OSProcElem.scala 26:11]
-  assign io_outV = {{16'd0}, vreg}; // @[OSProcElem.scala 27:11]
-  assign io_out = res; // @[OSProcElem.scala 28:10]
+  reg [31:0] res; // @[OSProcElem.scala 16:20]
+  reg [15:0] hreg; // @[OSProcElem.scala 17:21]
+  reg [15:0] vreg; // @[OSProcElem.scala 18:21]
+  wire [31:0] _res_T = io_inH * io_inV; // @[OSProcElem.scala 21:24]
+  wire [31:0] _res_T_2 = res + _res_T; // @[OSProcElem.scala 21:14]
+  assign io_outH = {{16'd0}, hreg}; // @[OSProcElem.scala 27:11]
+  assign io_outV = {{16'd0}, vreg}; // @[OSProcElem.scala 28:11]
+  assign io_out = res; // @[OSProcElem.scala 29:10]
   always @(posedge clock) begin
-    if (reset) begin // @[OSProcElem.scala 15:21]
-      res <= 32'h0; // @[OSProcElem.scala 15:21]
+    if (reset) begin // @[OSProcElem.scala 16:20]
+      res <= 32'h0; // @[OSProcElem.scala 16:20]
     end else begin
-      res <= _res_T_2; // @[OSProcElem.scala 20:7]
-    end
-    if (reset) begin // @[OSProcElem.scala 16:21]
-      hreg <= 16'h0; // @[OSProcElem.scala 16:21]
-    end else begin
-      hreg <= io_inH; // @[OSProcElem.scala 23:8]
+      res <= _res_T_2; // @[OSProcElem.scala 21:7]
     end
     if (reset) begin // @[OSProcElem.scala 17:21]
-      vreg <= 16'h0; // @[OSProcElem.scala 17:21]
+      hreg <= 16'h0; // @[OSProcElem.scala 17:21]
     end else begin
-      vreg <= io_inV; // @[OSProcElem.scala 24:8]
+      hreg <= io_inH; // @[OSProcElem.scala 24:8]
+    end
+    if (reset) begin // @[OSProcElem.scala 18:21]
+      vreg <= 16'h0; // @[OSProcElem.scala 18:21]
+    end else begin
+      vreg <= io_inV; // @[OSProcElem.scala 25:8]
     end
   end
 // Register and memory initialization
