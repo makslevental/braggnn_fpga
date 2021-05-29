@@ -1,6 +1,7 @@
 package systolic
 
 import chisel3._
+import chisel3.stage.ChiselStage
 
 //noinspection TypeAnnotation
 class OSMatMul(rows: Int, cols: Int, bitWidth: Int) extends Module {
@@ -44,4 +45,10 @@ class OSMatMul(rows: Int, cols: Int, bitWidth: Int) extends Module {
     }
   }
 
+}
+
+object OSMatMul extends App {
+  val rows = 4
+  val cols = 4
+  (new ChiselStage).emitVerilog(new OSMatMul(rows, cols, 16), args)
 }
