@@ -1,4 +1,4 @@
-package dnn
+package systolic
 
 import chisel3._
 import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
@@ -30,19 +30,19 @@ class Im2ColTests[T <: Bits](c: Im2Col[T]) extends PeekPokeTester(c) {
   var inCyc = c.inputCycles
   var clock = 0
   while (convCounts < noConvs) {
-    poke(c.io.dataIn.valid, true) // this is almost always in valid?
+    poke(c.io.inData.valid, true) // this is almost always in valid?
     for (i <- 0 until c.channels) {
       val testPix = testImg((imgIdx * c.channels + i) % (c.imgSize * c.imgSize))
-      poke(c.io.dataIn.bits(i), testPix)
+      poke(c.io.inData.bits(i), testPix)
     }
     imgIdx += 1
 
-    val vldOut = peek(c.io.dataOut.valid) == 1
+    val vldOut = peek(c.io.outData.valid) == 1
     if (vldOut) {
-//      val bits = peek(c.io.dataOut.bits).grouped(c.kernelSize).toArray.map(_.toArray).toArray
+//      val bits = peek(c.io.outData.bits).grouped(c.kernelSize).toArray.map(_.toArray).toArray
 //      printArray(
 //        bits,
-//        "dataOut.bits"
+//        "outData.bits"
 //      )
       for (i <- 0 until c.kernelSize) {
         for (j <- 0 until c.kernelSize) {
@@ -50,13 +50,13 @@ class Im2ColTests[T <: Bits](c: Im2Col[T]) extends PeekPokeTester(c) {
           val convXj = convX + c.kernelSize - j - 1
           if (c.padding && (convYi < 0 || convXj < 0 || convYi >= c.imgSize || convXj >= c.imgSize)) {
             for (k <- 0 until c.channels)
-              require(expect(c.io.dataOut.bits((i * c.kernelSize + j) * c.channels + k), BigInt(0)))
+              require(expect(c.io.outData.bits((i * c.kernelSize + j) * c.channels + k), BigInt(0)))
           } else {
             val idx = convYi * c.imgSize + convXj
             for (k <- 0 until c.channels) {
               val testValue =
                 testImg(idx * c.channels + k) >> (cyc * c.outWidth)
-              require(expect(c.io.dataOut.bits((i * c.kernelSize + j) * c.channels + k), testValue))
+              require(expect(c.io.outData.bits((i * c.kernelSize + j) * c.channels + k), testValue))
             }
           }
         }

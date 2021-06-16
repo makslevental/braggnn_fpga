@@ -1,8 +1,8 @@
 package matmul
 
-import myutil.util.{matMatMult, matVecMult, RandomVector}
 import chisel3._
 import chiseltest._
+import myutil.util.{matMatMult, matVecMult, RandomVector}
 import org.scalatest._
 
 //noinspection TypeAnnotation

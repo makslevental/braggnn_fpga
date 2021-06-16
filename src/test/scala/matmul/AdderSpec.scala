@@ -6,9 +6,9 @@ import org.scalatest._
 
 //noinspection TypeAnnotation
 class MACSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-  behavior of "MAC"
+  behavior.of("MAC")
 
-  val bitWidth   = 8
+  val bitWidth = 8
   val cBits: Int = 16
 
   it should "multiply and accumulate things correctly" in {
@@ -35,7 +35,7 @@ class MACSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 }
 
 class AdderSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-  behavior of "Adder"
+  behavior.of("Adder")
 
   val bitWidth = 8
 
@@ -57,7 +57,7 @@ class AdderSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 }
 
 class PipeAdderSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-  behavior of "Adder"
+  behavior.of("Adder")
 
   val bitWidth = 8
 
@@ -82,12 +82,12 @@ class PipeAdderSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 }
 
 class LogSumSpec extends FlatSpec with ChiselScalatestTester with Matchers {
-  behavior of "LogSum"
+  behavior.of("LogSum")
 
   val bitWidth = 8
   val elements = 8
 
-  val rand    = new scala.util.Random(1)
+  val rand = new scala.util.Random(1)
   val repeats = 5
 
   it should "should sum all elements correctly" in {

@@ -1,4 +1,4 @@
-package dnn
+package systolic
 
 import myutil.util.{matMatMult, printArray, RandomVector}
 import chisel3._
