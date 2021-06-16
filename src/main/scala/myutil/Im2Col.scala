@@ -1,5 +1,5 @@
 // originally from https://github.com/da-steve101/binary_connect_cifar
-package systolic
+package myutil
 
 import Chisel.{Counter, Queue, ShiftRegister, Valid}
 import chisel3._
@@ -14,7 +14,7 @@ class Im2Col[T <: Bits](
   val imgSize:     Int,
   val channels:    Int, // num filters or channels in
   val kernelSize:  Int,
-  qSize:           Int,
+  val qSize:       Int,
   val stride:      Int,
   val padding:     Boolean,
   val throughput:  Double,
@@ -34,16 +34,16 @@ class Im2Col[T <: Bits](
   }
 
   val io = IO(new Bundle {
-    val dataIn = Flipped(Valid(Vec(channels, dtype.cloneType)))
-    val dataOut = Valid(Vec(kernelSize * kernelSize * channels, outUInt.cloneType))
+    val inData = Flipped(Valid(Vec(channels, dtype.cloneType)))
+    val outData = Valid(Vec(kernelSize * kernelSize * channels, outUInt.cloneType))
   })
   // TODO(max) 3 x 16 concatenated into a UInt48
-  val dataInAsUInt = io.dataIn.bits.asInstanceOf[Vec[Bits]].map(_.asUInt()).reduce(_ ## _)
-  val queueIOIn = Wire(Decoupled(dataInAsUInt.cloneType))
-  queueIOIn.bits := dataInAsUInt
-  queueIOIn.valid := io.dataIn.valid
+  val inDataAsUInt = io.inData.bits.asInstanceOf[Vec[Bits]].map(_.asUInt()).reduce(_ ## _)
+  val queueIOIn = Wire(Decoupled(inDataAsUInt.cloneType))
+  queueIOIn.bits := inDataAsUInt
+  queueIOIn.valid := io.inData.valid
 
-  val uintBits = Wire(dataInAsUInt.cloneType)
+  val uintBits = Wire(inDataAsUInt.cloneType)
   val vldIn = Wire(Bool())
 
   val q = Queue(queueIOIn, qSize)
@@ -132,12 +132,12 @@ class Im2Col[T <: Bits](
     }
   }
 
-  io.dataOut.bits := regOuts
+  io.outData.bits := regOuts
 
   val latency =
     inputCycles * runtimeCycles * imgSize * (kernelSize - (padAmt + 1)) + (kernelSize - (padAmt + 1)) * runtimeCycles * inputCycles + 1
   val vld = ShiftRegister(vldIn, latency, false.B, true.B)
-  io.dataOut.valid := vld
+  io.outData.valid := vld
 }
 
 object Im2Col extends App {

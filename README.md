@@ -19,3 +19,7 @@ Add `"edu.berkeley.cs" %% "hardfloat" % "1.3-SNAPSHOT"` to `build.sbt`
 # OS and WS Systolic Array
 
 ![](readme/OS_and_WS_systolic_array.png)
+
+# LineBuffer
+
+![](readme/linebuffer.gif)

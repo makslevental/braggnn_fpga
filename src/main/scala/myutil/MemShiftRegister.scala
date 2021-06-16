@@ -1,6 +1,6 @@
 // originally from https://github.com/da-steve101/binary_connect_cifar
 
-package systolic
+package myutil
 
 import chisel3._
 import chisel3.util._

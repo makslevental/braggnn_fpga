@@ -1,9 +1,10 @@
-package systolic
+package dnn
 
 import myutil.util.{conv, im2col, printArray}
 import chisel3._
 import chiseltest._
 import org.scalatest._
+import systolic.WSMatMul
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
