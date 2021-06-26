@@ -17,7 +17,8 @@ lazy val root = (project in file("."))
       //"edu.berkeley.cs" %% "hardfloat" % "1.3" % "SNAPSHOT",
       "org.scalactic" %% "scalactic" % "3.2.9",
       "org.scalatest" %% "scalatest" % "3.2.9" % "Test", // the capital T is apparently super important???
-      "org.rogach" %% "scallop" % "4.0.3"
+      "org.rogach" %% "scallop" % "4.0.3",
+      "com.lihaoyi" %% "sourcecode" % "0.2.7"
     ),
     scalacOptions ++= Seq(
       "-Xsource:2.11",

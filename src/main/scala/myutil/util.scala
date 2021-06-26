@@ -9,6 +9,17 @@ import scala.util.Random
 import scala.reflect.ClassTag
 
 object util {
+
+  def debug[V](
+    value: sourcecode.Text[V],
+    msg:   String = ""
+  )(
+    implicit enclosingFn: sourcecode.Enclosing,
+    line:                 sourcecode.Line
+  ): Unit = {
+    println(enclosingFn.value + s":${line.value}\t" + " " + msg + ": " + value.source + "=" + value.value)
+  }
+
   def matMatMult(
     A: Array[Array[Int]],
     B: Array[Array[Int]]
