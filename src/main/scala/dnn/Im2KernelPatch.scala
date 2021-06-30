@@ -15,8 +15,13 @@ class Im2KernelPatch[T <: Bits](val dtype: T, val cols: Int, val kSize: Int) ext
   lineBuffer.io.inData <> io.inData
   kernelPatch.io.inData <> lineBuffer.io.outData
 
+  when(!lineBuffer.io.outData.valid) {
+    kernelPatch.reset := true.B
+  }
+
   for {
     i <- 0 until kSize
     j <- 0 until kSize
-  } io.outData(i)(j) := kernelPatch.io.outData(i)(j)
+  } io.outData(i)(j) := kernelPatch.io.outData.bits(i)(j)
+
 }

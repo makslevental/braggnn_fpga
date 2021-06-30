@@ -9,7 +9,7 @@ import treadle.WriteVcdAnnotation
 class LineBufferSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   behavior.of("LineBuffer")
 
-  val repeats = 5
+  val repeats = 10
   val dWidth = 32
   val rowsOut = 3
   val colsIn = 8
@@ -27,11 +27,11 @@ class LineBufferSpec extends FlatSpec with ChiselScalatestTester with Matchers {
       for (r <- 0 until repeats) {
         for (i <- 0 until colsIn) {
           c.io.outData.bits(r % rowsOut).expect((i + 1).U)
-          c.io.outData.bits.foreach(r => print(f"${r.peek().litValue()}%5s"))
-          println
+//          c.io.outData.bits.foreach(r => print(f"${r.peek().litValue()}%5s"))
+//          println
           c.clock.step()
         }
-        println("***********")
+//        println("***********")
       }
     }
   }
@@ -52,6 +52,7 @@ class LineBufferSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         c.io.inData.valid.poke(false.B)
 
         for (i <- 0 until colsIn) {
+//          println(s"${c.io.outData.valid.peek().litValue()}")
 //          c.io.outData.bits.foreach(r => print(f"${r.peek().litValue()}%5s"))
 //          println
           for (j <- 0 until rowsOut) {

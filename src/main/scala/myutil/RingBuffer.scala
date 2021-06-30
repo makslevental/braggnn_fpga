@@ -35,8 +35,9 @@ class RingBuffer[T <: Data](
   }
 
   val posEdge = io.inData.valid && !RegNext(io.inData.valid)
+  val negEdge = !io.inData.valid && RegNext(io.inData.valid)
 
-  io.outData.valid := !io.inData.valid || posEdge
   val (outputPtr, willWrap) = Counter(0 until entriesIn, io.outData.ready, io.inData.valid)
+  io.outData.valid := !io.inData.valid
   io.outData.bits(0) := ram(outputPtr)
 }

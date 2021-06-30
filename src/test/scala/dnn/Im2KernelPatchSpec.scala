@@ -24,7 +24,7 @@ class Im2KernelPatchSpec extends FlatSpec with ChiselScalatestTester with Matche
   printArray(testImg.toArray.map(_.toArray))
 
   it should "fill" in {
-    test(new Im2KernelPatch(UInt(dWidth.W), cols, kSize)).withAnnotations(Seq(WriteVcdAnnotation)){ c =>
+    test(new Im2KernelPatch(UInt(dWidth.W), cols, kSize)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
       for (r <- 0 until imgSize) {
         c.io.inData.valid.poke(true.B)
         for (cl <- 0 until imgSize) {

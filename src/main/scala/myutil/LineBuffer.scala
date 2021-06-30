@@ -1,6 +1,6 @@
 package myutil
 
-import chisel3.util.{Counter, MuxLookup, Valid}
+import chisel3.util.{Arbiter, Counter, MuxLookup, Valid}
 import chisel3._
 import chisel3.stage.ChiselStage
 
@@ -17,11 +17,13 @@ class LineBuffer[T <: Bits](val dtype: T, val colsIn: Int, val rowsOut: Int) ext
   val io = IO(new Bundle {
     val inData = Flipped(Valid(Vec(colsIn, dtype.cloneType)))
     val outData = Valid(Vec(rowsOut, dtype.cloneType))
+    val colCntrWillWrap = Output(Bool())
   })
   val (_colCntr, colCntrWillWrap) = Counter(!io.inData.valid, colsIn)
   val (rowCntr, _) = Counter(colCntrWillWrap, rowsOut)
+  io.colCntrWillWrap := colCntrWillWrap
 
-  //  printf(p"colCntr ${_colCntr}, rowCntr ${rowCntr}\n")
+  io.outData.valid := !io.inData.valid
 
   // initialization
   val rings = VecInit(Seq.fill(rowsOut) { Module(new RingBuffer(dtype, colsIn)).io })
@@ -30,10 +32,9 @@ class LineBuffer[T <: Bits](val dtype: T, val colsIn: Int, val rowsOut: Int) ext
     for (c <- 0 until colsIn) {
       rings(r).inData.valid := false.B
       rings(r).inData.bits(c) := 0.U
-      rings(r).outData.ready := false.B
+      rings(r).outData.ready := !io.inData.valid
     }
   }
-  io.outData.valid := !io.inData.valid
 
   when(io.inData.valid) {
     rings(rowCntr).inData.valid := true.B
@@ -44,7 +45,6 @@ class LineBuffer[T <: Bits](val dtype: T, val colsIn: Int, val rowsOut: Int) ext
   }.otherwise {
     for (r <- 0 until rowsOut) {
       rings(r).inData.valid := false.B
-      rings(r).outData.ready := true.B
     }
   }
 
@@ -62,15 +62,16 @@ class LineBuffer[T <: Bits](val dtype: T, val colsIn: Int, val rowsOut: Int) ext
       (2 * rowCntr.getWidth).W
     )) % rowsOut.S((2 * rowCntr.getWidth).W)).asUInt()
 
-    io.outData.bits(idx) := rings(
+    val ring = rings(
       r
-    ).outData.bits(0)
+    )
+    io.outData.bits(idx) := Mux(ring.outData.valid, ring.outData.bits(0), 0.U.asInstanceOf[T])
 
 //    MuxLookup
 //    MuxLookup(idx, 0,  0 -> bits(0))
   }
 
-  io.outData.valid := rings(0).outData.valid
+  io.outData.valid := rings.map { r => r.outData.valid }.reduce { (r1, r2) => r1 && r2 }
 }
 
 object LineBuffer extends App {

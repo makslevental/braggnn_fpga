@@ -61,14 +61,11 @@ class RingBufferSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 
   it should "update" in {
     test(new RingBuffer(UInt(dWidth.W), entriesIn)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
-      for (i <- 0 until repeats * entriesIn) {
+      for (i <- 0 until repeats) {
         c.io.outData.ready.poke(false.B)
-
-        if (i % entriesIn == 0) {
-          c.io.inData.valid.poke(true.B)
-          for (j <- 0 until entriesIn) {
-            c.io.inData.bits(j).poke((i + j + 1).U)
-          }
+        c.io.inData.valid.poke(true.B)
+        for (j <- 0 until entriesIn) {
+          c.io.inData.bits(j).poke((i * entriesIn + j + 1).U)
         }
 
         c.clock.step()
@@ -76,12 +73,15 @@ class RingBufferSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         c.io.inData.valid.poke(false.B)
         c.io.outData.ready.poke(true.B)
 
-//        println(
-//          s"idx ${i % entriesIn} valid ${c.io.outData.valid.peek().litValue()} c.io.output.bits ${c.io.outData.bits(0).peek().litValue()}"
-//        )
-        c.io.outData.valid.expect(true.B)
-        c.io.outData.bits(0).expect((i + 1).U)
-        c.clock.step()
+        for (j <- 0 until entriesIn) {
+//          println(
+//            s"idx ${j % entriesIn} valid ${c.io.outData.valid.peek().litValue()} c.io.output.bits ${c.io.outData.bits(0).peek().litValue()}"
+//          )
+          c.io.outData.valid.expect(true.B)
+          c.io.outData.bits(0).expect((i * entriesIn + j + 1).U)
+          c.clock.step()
+        }
+//        println("**********")
       }
     }
   }
