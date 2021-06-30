@@ -2,17 +2,19 @@ package myutil
 
 import chisel3._
 import chiseltest._
+import chiseltest.experimental.TestOptionBuilder.ChiselScalatestOptionBuilder
 import org.scalatest._
+import treadle.WriteVcdAnnotation
 
 class LineBufferSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   behavior.of("LineBuffer")
 
   val repeats = 5
   val dWidth = 32
-  val rowsOut = 5
+  val rowsOut = 3
   val colsIn = 8
 
-  it should "should rotate" in {
+  it should "rotate" in {
     test(new LineBuffer(UInt(dWidth.W), colsIn, rowsOut)) { c =>
 //      util.debug(c.io.inData.valid.peek().litValue(), "on init")
 //      util.debug(c.io.outData.valid.peek().litValue(), "on init")
@@ -37,14 +39,14 @@ class LineBufferSpec extends FlatSpec with ChiselScalatestTester with Matchers {
     }
   }
 
-  it should "should update" in {
-    test(new LineBuffer(UInt(dWidth.W), colsIn, rowsOut)) { c =>
+  it should "update" in {
+    test(new LineBuffer(UInt(dWidth.W), colsIn, rowsOut)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
       for (row <- 0 until 100) {
 //        util.debug(c.io.outData.valid.peek().litValue(), "on init")
         c.io.inData.valid.poke(true.B)
 //        util.debug(c.io.outData.valid.peek().litValue(), "after indata is valid")
         for (i <- 0 until colsIn) {
-          c.io.inData.bits(i).poke((row + 1).U)
+          c.io.inData.bits(i).poke((colsIn*row + i + 1).U)
         }
 
         c.clock.step()

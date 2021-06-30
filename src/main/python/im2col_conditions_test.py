@@ -3,7 +3,7 @@ from pprint import pprint
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
-from dnn.test_img import outputs
+from src.main.python.test_img import outputs
 
 np.set_printoptions(edgeitems=30, linewidth=100000,
                     formatter=dict(float=lambda x: "%.3g" % x))

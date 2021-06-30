@@ -45,6 +45,7 @@ class WSMatMul(rows: Int, cols: Int, bitWidth: Int = 8) extends Module {
     io.out(row) := pElems(row).last.outPartialSum // results
   }
 
+
 }
 
 object WSMatMul extends App {

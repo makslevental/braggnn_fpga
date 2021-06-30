@@ -1,10 +1,11 @@
 // originally from https://github.com/da-steve101/binary_connect_cifar
-package myutil
+package dnn
 
 import Chisel.{Counter, Queue, ShiftRegister, Valid}
 import chisel3._
 import chisel3.stage.ChiselStage
-import chisel3.util.{log2Ceil, Decoupled}
+import chisel3.util.{Decoupled, log2Ceil}
+import myutil.MemShiftRegister
 
 import scala.collection.mutable.ArrayBuffer
 

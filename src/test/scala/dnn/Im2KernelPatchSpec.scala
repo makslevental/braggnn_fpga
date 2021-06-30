@@ -1,7 +1,10 @@
 package dnn
 
 import chisel3._
+import chisel3.tester.experimental.TestOptionBuilder._
 import chiseltest._
+import myutil.util.printArray
+import treadle.{VerboseAnnotation, WriteVcdAnnotation}
 import org.scalatest._
 
 import scala.util.Random
@@ -11,16 +14,17 @@ class Im2KernelPatchSpec extends FlatSpec with ChiselScalatestTester with Matche
 
   val repeats = 20
   val dWidth = 32
-  val kSize = 5
-  val imgSize = 32
-  val cols = 32
+  val kSize = 3
+  val imgSize = 8
+  val cols = 8
   val myRand = new Random
   val testImg = List.tabulate(imgSize, imgSize) { (i, j) =>
-    (i * imgSize) + j
+    (i * imgSize) + j + 1
   }
+  printArray(testImg.toArray.map(_.toArray))
 
-  it should "should fill" in {
-    test(new Im2KernelPatch(UInt(dWidth.W), cols, kSize)) { c =>
+  it should "fill" in {
+    test(new Im2KernelPatch(UInt(dWidth.W), cols, kSize)).withAnnotations(Seq(WriteVcdAnnotation)){ c =>
       for (r <- 0 until imgSize) {
         c.io.inData.valid.poke(true.B)
         for (cl <- 0 until imgSize) {
@@ -29,15 +33,19 @@ class Im2KernelPatchSpec extends FlatSpec with ChiselScalatestTester with Matche
         c.clock.step()
         c.io.inData.valid.poke(false.B)
 
-        c.io.outData.foreach { row => row.foreach(r => print(s"${r.peek().litValue()} ")); println }
-        println
+        for (_ <- 0 until cols) {
+          c.io.outData.foreach { row => row.foreach(r => print(s"${r.peek().litValue()} ")); println }
+          c.clock.step()
+          println
+        }
+        println("**************")
       }
 
-      for (_ <- 0 until imgSize * imgSize) {
-        c.io.outData.foreach { row => row.foreach(r => print(s"${r.peek().litValue()} ")); println }
-        c.clock.step()
-        println
-      }
+//      for (_ <- 0 until imgSize * imgSize) {
+//        c.io.outData.foreach { row => row.foreach(r => print(s"${r.peek().litValue()} ")); println }
+//        c.clock.step()
+//        println
+//      }
     }
   }
 

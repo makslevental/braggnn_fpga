@@ -1,8 +1,9 @@
-package systolic
+package dnn
 
 import chisel3._
 import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
-import myutil.Im2Col
+import dnn.Im2Col
+
 import scala.util.Random
 
 //noinspection TypeAnnotation

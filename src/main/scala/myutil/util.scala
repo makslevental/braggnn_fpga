@@ -1,5 +1,8 @@
 package myutil
 
+import chisel3.util.RegEnable
+import chisel3.{Bool, Clock, Data, Mux, RegInit, fromBooleanToLiteral, withClock}
+
 import scala.math.pow
 import scala.reflect.runtime.currentMirror
 import scala.reflect.runtime.{universe => ru}
@@ -8,7 +11,26 @@ import scala.tools.reflect.ToolBox
 import scala.util.Random
 import scala.reflect.ClassTag
 
+/** Generates a register that updates on the falling edge of the input clock signal.
+  */
+object NegEdgeReg {
+  def apply[T <: Data](clock: Clock, next: T, enable: Bool=true.B, name: Option[String] = None): T = {
+    // TODO pass in initial value as well
+    withClock((!clock.asUInt).asClock) {
+      val reg = RegEnable(next = next, enable = enable)
+      name.foreach{reg.suggestName(_)}
+      reg
+    }
+  }
+}
+
 object util {
+
+  def toggle(ce: Bool) = {
+    val x = RegInit(false.B)
+    x := Mux(ce, !x, x)
+    x
+  }
 
   def debug[V](
     value: sourcecode.Text[V],
@@ -131,6 +153,7 @@ object util {
   }
 
   def printArray[T](arr: Array[T], name: String = "arr"): Unit = {
+//    c.io.outData.foreach { row => row.foreach(r => print(s"${r.peek().litValue()} ")); println }
     println(s"$name: ${arr.deep}".replace("Array(", "\n[").replace(")", "]"))
   }
 

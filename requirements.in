@@ -1,0 +1,4 @@
+numpy
+pip-tools
+pyrtl
+black

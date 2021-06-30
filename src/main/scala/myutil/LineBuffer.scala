@@ -45,6 +45,16 @@ class LineBuffer[T <: Bits](val dtype: T, val colsIn: Int, val rowsOut: Int) ext
     }
   }
 
+//  rings(rowCntr).inData.valid := io.inData.valid
+//  for (c <- 0 until colsIn) {
+//    for (r <- 0 until rowsOut) {
+//      when(rowCntr === r.U) {
+//        rings(rowCntr).inData.bits(c) := io.inData.bits(c)
+//        rings(rowCntr).inData.valid := true.B
+//      }
+//    }
+//  }
+
   // need to rotate here
   /*
     [1,2,3]
@@ -61,10 +71,13 @@ class LineBuffer[T <: Bits](val dtype: T, val colsIn: Int, val rowsOut: Int) ext
 
     io.outData.bits(idx) := rings(
       r
-    ).outData(0)
+    ).outData.bits(0)
+
 //    MuxLookup
 //    MuxLookup(idx, 0,  0 -> bits(0))
   }
+
+  io.outData.valid := rings(0).outData.valid
 }
 
 object LineBuffer extends App {
