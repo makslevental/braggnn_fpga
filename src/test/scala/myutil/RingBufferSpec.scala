@@ -16,13 +16,44 @@ class RingBufferSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   it should "rotate" in {
     test(new RingBuffer(UInt(dWidth.W), entriesIn)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
       c.io.inData.valid.poke(true.B)
+      c.io.outData.ready.poke(false.B)
       for (j <- 0 until entriesIn) {
         c.io.inData.bits(j).poke((j + 1).U)
       }
+
       c.clock.step()
+
       c.io.inData.valid.poke(false.B)
+      c.io.outData.ready.poke(true.B)
       for (i <- 0 until repeats * entriesIn) {
-        println(s"${i % entriesIn} c.io.output.bits ${c.io.outData.bits(0).peek().litValue()}")
+//        println(
+//          s"idx ${i % entriesIn} valid ${c.io.outData.valid.peek().litValue()} c.io.output.bits ${c.io.outData.bits(0).peek().litValue()}"
+//        )
+        c.io.outData.valid.expect(true.B)
+        c.io.outData.bits(0).expect((i % entriesIn + 1).U)
+        c.clock.step()
+      }
+    }
+  }
+
+  it should "not rotate when not ready" in {
+    test(new RingBuffer(UInt(dWidth.W), entriesIn)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
+      c.io.outData.ready.poke(false.B)
+      c.io.inData.valid.poke(true.B)
+      for (j <- 0 until entriesIn) {
+        c.io.inData.bits(j).poke((j + 1).U)
+      }
+
+      c.clock.step()
+
+      c.io.inData.valid.poke(false.B)
+      c.io.outData.ready.poke(false.B)
+      for (i <- 0 until repeats * entriesIn) {
+//        println(
+//          s"idx ${i % entriesIn} valid ${c.io.outData.valid.peek().litValue()} c.io.output.bits ${c.io.outData.bits(0).peek().litValue()}"
+//        )
+        c.io.outData.valid.expect(true.B)
+        c.io.outData.bits(0).expect(1.U)
         c.clock.step()
       }
     }
@@ -31,16 +62,25 @@ class RingBufferSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   it should "update" in {
     test(new RingBuffer(UInt(dWidth.W), entriesIn)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
       for (i <- 0 until repeats * entriesIn) {
-        // if reading from last entry then write new entries
+        c.io.outData.ready.poke(false.B)
+
         if (i % entriesIn == 0) {
           c.io.inData.valid.poke(true.B)
           for (j <- 0 until entriesIn) {
             c.io.inData.bits(j).poke((i + j + 1).U)
           }
-        } else {
-          c.io.inData.valid.poke(false.B)
         }
-        println(s"${i % entriesIn} c.io.output.bits ${c.io.outData.bits(0).peek().litValue()}")
+
+        c.clock.step()
+
+        c.io.inData.valid.poke(false.B)
+        c.io.outData.ready.poke(true.B)
+
+//        println(
+//          s"idx ${i % entriesIn} valid ${c.io.outData.valid.peek().litValue()} c.io.output.bits ${c.io.outData.bits(0).peek().litValue()}"
+//        )
+        c.io.outData.valid.expect(true.B)
+        c.io.outData.bits(0).expect((i + 1).U)
         c.clock.step()
       }
     }

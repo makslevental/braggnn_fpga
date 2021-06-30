@@ -1,7 +1,7 @@
 package myutil
 
 import chisel3.util.RegEnable
-import chisel3.{Bool, Clock, Data, Mux, RegInit, fromBooleanToLiteral, withClock}
+import chisel3.{fromBooleanToLiteral, withClock, Bool, Clock, Data, Mux, RegInit}
 
 import scala.math.pow
 import scala.reflect.runtime.currentMirror
@@ -14,17 +14,23 @@ import scala.reflect.ClassTag
 /** Generates a register that updates on the falling edge of the input clock signal.
   */
 object NegEdgeReg {
-  def apply[T <: Data](clock: Clock, next: T, enable: Bool=true.B, name: Option[String] = None): T = {
+  def apply[T <: Data](clock: Clock, next: T, enable: Bool = true.B, name: Option[String] = None): T = {
     // TODO pass in initial value as well
     withClock((!clock.asUInt).asClock) {
       val reg = RegEnable(next = next, enable = enable)
-      name.foreach{reg.suggestName(_)}
+      name.foreach { reg.suggestName(_) }
       reg
     }
   }
 }
 
 object util {
+
+//  def posEdgeDetector(ce: Bool) = {
+//    val x = RegInit(false.B)
+//    x := Mux(ce, !x, x)
+//    x
+//  }
 
   def toggle(ce: Bool) = {
     val x = RegInit(false.B)

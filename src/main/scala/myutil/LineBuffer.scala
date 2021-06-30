@@ -30,30 +30,23 @@ class LineBuffer[T <: Bits](val dtype: T, val colsIn: Int, val rowsOut: Int) ext
     for (c <- 0 until colsIn) {
       rings(r).inData.valid := false.B
       rings(r).inData.bits(c) := 0.U
+      rings(r).outData.ready := false.B
     }
   }
   io.outData.valid := !io.inData.valid
 
   when(io.inData.valid) {
     rings(rowCntr).inData.valid := true.B
+    rings(rowCntr).outData.ready := false.B
     for (c <- 0 until colsIn) {
       rings(rowCntr).inData.bits(c) := io.inData.bits(c)
     }
   }.otherwise {
     for (r <- 0 until rowsOut) {
       rings(r).inData.valid := false.B
+      rings(r).outData.ready := true.B
     }
   }
-
-//  rings(rowCntr).inData.valid := io.inData.valid
-//  for (c <- 0 until colsIn) {
-//    for (r <- 0 until rowsOut) {
-//      when(rowCntr === r.U) {
-//        rings(rowCntr).inData.bits(c) := io.inData.bits(c)
-//        rings(rowCntr).inData.valid := true.B
-//      }
-//    }
-//  }
 
   // need to rotate here
   /*

@@ -3,10 +3,8 @@ package myutil
 import Chisel.{Counter, Decoupled, Queue, ShiftRegister, Valid}
 import chisel3._
 import chisel3.experimental.DataMirror
-import chisel3.util.{DeqIO, EnqIO, RegEnable, isPow2}
+import chisel3.util.{isPow2, DeqIO, EnqIO, RegEnable}
 import myutil.util.toggle
-
-
 
 class RingBuffer[T <: Data](
   val gen:       T,
@@ -25,7 +23,7 @@ class RingBuffer[T <: Data](
 
   val io = IO(new Bundle() {
     val inData = Flipped(Valid(Input(Vec(entriesIn, gen.cloneType))))
-    val outData = Valid(Output(Vec(entriesOut, gen.cloneType)))
+    val outData = Decoupled(Vec(entriesOut, gen.cloneType))
   })
 
   // Writes take effect on the rising clock edge after the request.
@@ -36,7 +34,9 @@ class RingBuffer[T <: Data](
     }
   }
 
-  io.outData.valid := RegNext(!io.inData.valid)
-  val (outputPtr, willWrap) = Counter(!io.inData.valid, entriesIn)
+  val posEdge = io.inData.valid && !RegNext(io.inData.valid)
+
+  io.outData.valid := !io.inData.valid || posEdge
+  val (outputPtr, willWrap) = Counter(0 until entriesIn, io.outData.ready, io.inData.valid)
   io.outData.bits(0) := ram(outputPtr)
 }
