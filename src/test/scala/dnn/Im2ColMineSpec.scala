@@ -4,12 +4,12 @@ import chisel3._
 import chisel3.tester.experimental.TestOptionBuilder._
 import chiseltest._
 import myutil.util.printArray
-import treadle.{VerboseAnnotation, WriteVcdAnnotation}
 import org.scalatest._
+import treadle.WriteVcdAnnotation
 
 import scala.util.Random
 
-class Im2KernelPatchSpec extends FlatSpec with ChiselScalatestTester with Matchers {
+class Im2ColMineSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   behavior.of("Im2KernelPatchSpec")
 
   val repeats = 20
@@ -24,7 +24,7 @@ class Im2KernelPatchSpec extends FlatSpec with ChiselScalatestTester with Matche
   printArray(testImg.toArray.map(_.toArray))
 
   it should "slide" in {
-    test(new Im2KernelPatch(UInt(dWidth.W), cols, kSize)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
+    test(new Im2ColMine(UInt(dWidth.W), cols, kSize)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
       for (r <- 0 until imgSize) {
         c.io.inData.valid.poke(true.B)
         for (cl <- 0 until imgSize) {
@@ -34,12 +34,13 @@ class Im2KernelPatchSpec extends FlatSpec with ChiselScalatestTester with Matche
         c.io.inData.valid.poke(false.B)
 
         for (_ <- 0 until cols) {
-          c.io.outData.foreach { row => row.foreach(r => print(s"${r.peek().litValue()} ")); println }
-          c.clock.step()
+          c.io.outData.foreach { r => print(f"${r.peek().litValue()}%5s") }
           println
+          c.clock.step()
         }
-        println("**************")
+        println(s"$r  **************")
       }
     }
   }
+
 }
