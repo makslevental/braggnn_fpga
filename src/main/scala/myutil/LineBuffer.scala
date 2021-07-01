@@ -17,11 +17,9 @@ class LineBuffer[T <: Bits](val dtype: T, val colsIn: Int, val rowsOut: Int) ext
   val io = IO(new Bundle {
     val inData = Flipped(Valid(Vec(colsIn, dtype.cloneType)))
     val outData = Valid(Vec(rowsOut, dtype.cloneType))
-    val colCntrWillWrap = Output(Bool())
   })
   val (_colCntr, colCntrWillWrap) = Counter(!io.inData.valid, colsIn)
   val (rowCntr, _) = Counter(colCntrWillWrap, rowsOut)
-  io.colCntrWillWrap := colCntrWillWrap
 
   io.outData.valid := !io.inData.valid
 
@@ -56,19 +54,34 @@ class LineBuffer[T <: Bits](val dtype: T, val colsIn: Int, val rowsOut: Int) ext
 
     [4,5,6]
    */
+
+  def rotater(rowsOut: Int) = {
+    val ms = scala.collection.mutable.Map[(Int, Int), Int]()
+    var rowCntr = 0
+    for (col <- 0 until colsIn * rowsOut) {
+      if ((col + 1) % colsIn == 0) rowCntr += 1
+      if (rowCntr >= rowsOut) rowCntr = 0
+      for (r <- 0 until rowsOut) {
+        ms((r, rowCntr)) = Math.floorMod(rowCntr - r, rowsOut)
+      }
+    }
+    val mss = ms.flatMap { case ((r, rowCntr), idx) => List((r * rowsOut + rowCntr, idx)) }.toList.sorted
+    require(Set(mss.map(_._1)) == Set(0 until rowsOut * rowsOut))
+    VecInit(mss.map(_._2.asUInt()))
+  }
+
+  val rot = rotater(rowsOut)
+
   for (r <- 0 until rowsOut) {
+    val ring = rings(r)
 
-    val idx = ((((rowCntr.zext() - r.S((2 * rowCntr.getWidth).W)) % rowsOut.S((2 * rowCntr.getWidth).W)) + rowsOut.S(
-      (2 * rowCntr.getWidth).W
-    )) % rowsOut.S((2 * rowCntr.getWidth).W)).asUInt()
+//    val idx = ((((rowCntr.zext() - r.S((2 * rowCntr.getWidth).W)) % rowsOut.S((2 * rowCntr.getWidth).W)) + rowsOut.S(
+//      (2 * rowCntr.getWidth).W
+//    )) % rowsOut.S((2 * rowCntr.getWidth).W)).asUInt()
+//    printf("%d,%d,%d\n", r.asUInt(), rowCntr, idx)
 
-    val ring = rings(
-      r
-    )
+    val idx = rot(r.asUInt() * rowsOut.asUInt() +& rowCntr.asUInt())
     io.outData.bits(idx) := Mux(ring.outData.valid, ring.outData.bits(0), 0.U.asInstanceOf[T])
-
-//    MuxLookup
-//    MuxLookup(idx, 0,  0 -> bits(0))
   }
 
   io.outData.valid := rings.map { r => r.outData.valid }.reduce { (r1, r2) => r1 && r2 }

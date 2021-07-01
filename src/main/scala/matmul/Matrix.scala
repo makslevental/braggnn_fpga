@@ -5,32 +5,32 @@ import chisel3.util.isPow2
 
 /** Pipelined DotProduct based on MAC and PipeAdder */
 //noinspection TypeAnnotation
-class DotProduct(bitWidth: Int = 8, size: Int = 16) extends Module {
+class DotProduct[T <: Bits](val dtype: T, size: Int = 16) extends Module {
   val errorMsg =
     s"\n\n[VTA] [DotProduct] size must be greater than 4 and a power of 2\n\n"
   require(size >= 2 && isPow2(size), errorMsg)
 
-  val macs = Seq.fill(size)(Module(new MAC(bitWidth, cBits = 1))) // # of total vector pairs
+  val macs = Seq.fill(size)(Module(new MAC(dtype.getWidth, cBits = 1))) // # of total vector pairs
   val summer = Module(new LogSum(macs.head.outBits, size))
   val outBits = summer.outBits
   val io = IO(new Bundle {
-    val a = Input(Vec(size, SInt(bitWidth.W)))
-    val b = Input(Vec(size, SInt(bitWidth.W)))
-    val y = Output(SInt(outBits.W))
+    val a = Input(Vec(size, dtype.cloneType))
+    val b = Input(Vec(size, dtype.cloneType))
+    val y = Output(UInt(outBits.W))
   })
   // Vector MACs
   for (i <- 0 until size) {
     macs(i).io.a := io.a(i)
     macs(i).io.b := io.b(i)
-    macs(i).io.c := 0.S
+    macs(i).io.c := 0.U
 
     summer.io.inVec(i) := macs(i).io.y
   }
   io.y := summer.io.y
 }
 
-class Matrix(rows: Int, cols: Int, bitWidth: Int) extends Bundle {
-  val data: Vec[Vec[SInt]] = Vec(rows, Vec(cols, SInt(bitWidth.W)))
+class Matrix[T <: Bits](val dtype: T, rows: Int, cols: Int) extends Bundle {
+  val data: Vec[Vec[T]] = Vec(rows, Vec(cols, dtype.cloneType))
 }
 
 //class Valid[+T <: Data](gen: T) extends Bundle {
@@ -46,14 +46,14 @@ class Matrix(rows: Int, cols: Int, bitWidth: Int) extends Bundle {
 
 // TODO: output width is wrong (will overflow)
 //noinspection TypeAnnotation
-class MatrixVectorProduct(rows: Int, cols: Int, bitWidth: Int) extends Module {
+class MatrixVectorProduct[T <: Bits](val dtype: T, rows: Int, cols: Int) extends Module {
   val io = IO(new Bundle {
-    val mat = Input(new Matrix(rows, cols, bitWidth))
-    val vec = Input(Vec(cols, SInt(bitWidth.W)))
-    val out = Output(Vec(rows, SInt(bitWidth.W)))
+    val mat = Input(new Matrix(dtype, rows, cols))
+    val vec = Input(Vec(cols, dtype.cloneType))
+    val out = Output(Vec(rows, dtype.cloneType))
   })
 
-  val dot = Seq.fill(rows)(Module(new DotProduct(bitWidth, cols)))
+  val dot = Seq.fill(rows)(Module(new DotProduct(dtype, cols)))
 
   for (i <- 0 until rows) {
     for (j <- 0 until cols) {
@@ -66,15 +66,15 @@ class MatrixVectorProduct(rows: Int, cols: Int, bitWidth: Int) extends Module {
 
 /** Perform (NXM)(MXR) -> (NXR) matrix-matrix-multiplication based on MatrixVectorProduct */
 //noinspection TypeAnnotation
-class MatrixMatrixProduct(N: Int, M: Int, R: Int, bitWidth: Int) extends Module {
+class MatrixMatrixProduct[T <: Bits](val dtype: T, N: Int, M: Int, R: Int) extends Module {
   val io = IO(new Bundle {
     // out = A * B
-    val A = Input(new Matrix(N, M, bitWidth))
-    val B = Input(new Matrix(M, R, bitWidth))
-    val out = Output(new Matrix(N, R, bitWidth))
+    val A = Input(new Matrix(dtype, N, M))
+    val B = Input(new Matrix(dtype, M, R))
+    val out = Output(new Matrix(dtype, N, R))
   })
 
-  var matVecMul = Seq.fill(R)(Module(new MatrixVectorProduct(N, M, bitWidth)))
+  var matVecMul = Seq.fill(R)(Module(new MatrixVectorProduct(dtype, N, M)))
 
   for (i <- 0 until R) {
     matVecMul(i).io.mat <> io.A
@@ -88,14 +88,14 @@ class MatrixMatrixProduct(N: Int, M: Int, R: Int, bitWidth: Int) extends Module 
 }
 
 //noinspection TypeAnnotation
-class FrobeniusInnerProduct(rows: Int, cols: Int, bitWidth: Int) extends Module {
-  val dot:    Seq[DotProduct] = Seq.fill(rows)(Module(new DotProduct(bitWidth, cols)))
+class FrobeniusInnerProduct[T <: Bits](val dtype: T, rows: Int, cols: Int) extends Module {
+  val dot:    Seq[DotProduct[T]] = Seq.fill(rows)(Module(new DotProduct(dtype, cols)))
   val summer: LogSum = Module(new LogSum(dot.head.outBits, rows))
 
   val io = IO(new Bundle {
-    val A = Input(new Matrix(rows, cols, bitWidth))
-    val B = Input(new Matrix(rows, cols, bitWidth))
-    val y = Output(SInt(summer.outBits.W))
+    val A = Input(new Matrix(dtype, rows, cols))
+    val B = Input(new Matrix(dtype, rows, cols))
+    val y = Output(UInt(summer.outBits.W))
   })
 
   for (i <- 0 until rows) {

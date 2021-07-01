@@ -1,0 +1,280 @@
+=== design hierarchy ===
+
+   Conv                              1
+     DotProduct                      1
+       LogSum                        1
+         Adder                      16
+         Adder_16                    8
+         Adder_24                    4
+         Adder_28                    2
+         Adder_30                    1
+         PipeAdder                  32
+       MAC                          64
+     Im2ColMine                      1
+       Im2KernelPatch                1
+         KernelShiftRegister         1
+         LineBuffer                  1
+           RingBuffer                8
+
+   Number of wires:             554682
+   Number of wire bits:         1458820
+   Number of public wires:       59220
+   Number of public wire bits:  963358
+   Number of memories:               8
+   Number of memory bits:         2560
+   Number of processes:          16895
+   Number of cells:             478655
+     $and                       236398
+     $mux                        12027
+     $not                           19
+     $or                         80318
+     $xor                       149805
+     \$memrd                         8
+     \$memwr                        80
+
+   Estimated number of LCs:          0
+
+=== RingBuffer ===
+
+   Number of wires:                772
+   Number of wire bits:           2175
+   Number of public wires:          96
+   Number of public wire bits:    1499
+   Number of memories:               1
+   Number of memory bits:          320
+   Number of processes:            327
+   Number of cells:                360
+     $and                            2
+     $mux                          338
+     $not                            1
+     $or                             3
+     $xor                            5
+     \$memrd                         1
+     \$memwr                        10
+
+   Estimated number of LCs:          0
+
+=== PipeAdder ===
+
+   Number of wires:               1779
+   Number of wire bits:           2823
+   Number of public wires:         502
+   Number of public wire bits:    1546
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:            262
+   Number of cells:               1015
+     $and                          503
+     $or                           251
+     $xor                          261
+
+   Estimated number of LCs:          0
+
+=== MAC ===
+
+   Number of wires:               6723
+   Number of wire bits:          18629
+   Number of public wires:         380
+   Number of public wire bits:   12286
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:             64
+   Number of cells:               6279
+     $and                         3194
+     $or                          1004
+     $xor                         2081
+
+   Estimated number of LCs:          0
+
+=== LogSum ===
+
+   Number of wires:                287
+   Number of wire bits:          29323
+   Number of public wires:         287
+   Number of public wire bits:   29323
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 63
+     Adder                          16
+     Adder_16                        8
+     Adder_24                        4
+     Adder_28                        2
+     Adder_30                        1
+     PipeAdder                      32
+
+   Estimated number of LCs:          0
+
+=== LineBuffer ===
+
+   Number of wires:               8666
+   Number of wire bits:          17854
+   Number of public wires:         980
+   Number of public wire bits:   10168
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              7
+   Number of cells:               7687
+     $and                           19
+     $mux                         7531
+     $not                           10
+     $or                            95
+     $xor                           24
+     RingBuffer                      8
+
+   Estimated number of LCs:          0
+
+=== KernelShiftRegister ===
+
+   Number of wires:               3770
+   Number of wire bits:           9474
+   Number of public wires:         186
+   Number of public wire bits:    5890
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:           1792
+   Number of cells:               1792
+     $mux                         1792
+
+   Estimated number of LCs:          0
+
+=== Im2KernelPatch ===
+
+   Number of wires:                176
+   Number of wire bits:           5260
+   Number of public wires:         174
+   Number of public wire bits:    5258
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  4
+     $not                            1
+     $or                             1
+     KernelShiftRegister             1
+     LineBuffer                      1
+
+   Estimated number of LCs:          0
+
+=== Im2ColMine ===
+
+   Number of wires:                154
+   Number of wire bits:           4742
+   Number of public wires:         154
+   Number of public wire bits:    4742
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     Im2KernelPatch                  1
+
+   Estimated number of LCs:          0
+
+=== DotProduct ===
+
+   Number of wires:                388
+   Number of wire bits:          14804
+   Number of public wires:         388
+   Number of public wire bits:   14804
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 65
+     LogSum                          1
+     MAC                            64
+
+   Estimated number of LCs:          0
+
+=== Conv ===
+
+   Number of wires:                157
+   Number of wire bits:           5017
+   Number of public wires:         157
+   Number of public wire bits:    5017
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     DotProduct                      1
+     Im2ColMine                      1
+
+   Estimated number of LCs:          0
+
+=== Adder_30 ===
+
+   Number of wires:               1580
+   Number of wire bits:           2394
+   Number of public wires:         522
+   Number of public wire bits:    1336
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               1058
+     $and                          525
+     $or                           262
+     $xor                          271
+
+   Estimated number of LCs:          0
+
+=== Adder_28 ===
+
+   Number of wires:               1556
+   Number of wire bits:           2364
+   Number of public wires:         512
+   Number of public wire bits:    1320
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               1044
+     $and                          517
+     $or                           258
+     $xor                          269
+
+   Estimated number of LCs:          0
+
+=== Adder_24 ===
+
+   Number of wires:               1550
+   Number of wire bits:           2352
+   Number of public wires:         511
+   Number of public wire bits:    1313
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               1039
+     $and                          515
+     $or                           257
+     $xor                          267
+
+   Estimated number of LCs:          0
+
+=== Adder_16 ===
+
+   Number of wires:               1538
+   Number of wire bits:           2334
+   Number of public wires:         507
+   Number of public wire bits:    1303
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               1031
+     $and                          511
+     $or                           255
+     $xor                          265
+
+   Estimated number of LCs:          0
+
+=== Adder ===
+
+   Number of wires:               1532
+   Number of wire bits:           2322
+   Number of public wires:         506
+   Number of public wire bits:    1296
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               1026
+     $and                          509
+     $or                           254
+     $xor                          263
+
+   Estimated number of LCs:          0

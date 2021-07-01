@@ -1,5 +1,6 @@
 package myutil
 
+import breeze.linalg.{DenseMatrix, Matrix}
 import chisel3.util.RegEnable
 import chisel3.{fromBooleanToLiteral, withClock, Bool, Clock, Data, Mux, RegInit}
 
@@ -71,6 +72,23 @@ object util {
       res(i) = dot * pow(2, shift).toInt
     }
     res
+  }
+
+  def breezeConv(
+    img:    Array[Array[Int]],
+    kernel: Array[Array[Int]]
+  ): Array[Array[Int]] = {
+
+    val kernelMat = DenseMatrix.create(kernel.length, kernel.length, kernel.transpose.flatten)
+    val imgMat = DenseMatrix.create(img.length, img.length, img.transpose.flatten)
+
+    print(imgMat)
+    println
+    print(kernelMat)
+
+//    breeze.signal.convolve(kernelMat, imgMat)
+//    print(conv)
+    img
   }
 
   def conv[T](

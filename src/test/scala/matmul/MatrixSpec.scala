@@ -17,15 +17,15 @@ class DotProdSpec extends FlatSpec with ChiselScalatestTester with Matchers {
     vec1.zip(vec2).map { case (a, b) => a * b }.sum
 
   it should "should compute dot product" in {
-    test(new DotProduct(bitWidth, elements)) { c =>
+    test(new DotProduct(UInt(bitWidth.W), elements)) { c =>
       for (_ <- 0 until repeats) {
         val vec1 = List.fill(elements)(rand.nextInt(50) + 1)
         val vec2 = List.fill(elements)(rand.nextInt(50) + 1)
         val dotProd = dotProduct(vec1, vec2)
 
         vec1.zip(vec2).zipWithIndex.foreach { case ((a, b), i) =>
-          c.io.a(i).poke(a.S)
-          c.io.b(i).poke(b.S)
+          c.io.a(i).poke(a.U)
+          c.io.b(i).poke(b.U)
         }
         c.clock.step(1)
         c.clock.step(1)
@@ -34,7 +34,7 @@ class DotProdSpec extends FlatSpec with ChiselScalatestTester with Matchers {
           println(c.io.y.peek())
         }
 
-        c.io.y.expect(dotProd.S)
+        c.io.y.expect(dotProd.U)
       }
     }
   }
@@ -51,7 +51,7 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   val bitWidth = 32
 
   it should "should compute square matrix vector product" in {
-    test(new MatrixVectorProduct(vecDim, vecDim, bitWidth)) { c =>
+    test(new MatrixVectorProduct(UInt(bitWidth.W), vecDim, vecDim)) { c =>
       for (_ <- 0 until repeats) {
         // generate data based on bits
         val vecGen = new RandomVector(vecDim, bitWidth)
@@ -63,9 +63,9 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         val res = matVecMult(inMat, inVec, 0)
 
         for (i <- 0 until vecDim) {
-          c.io.vec(i).poke(inVec(i).S)
+          c.io.vec(i).poke(inVec(i).U)
           for (j <- 0 until vecDim) {
-            c.io.mat.data(i)(j).poke(inMat(i)(j).S)
+            c.io.mat.data(i)(j).poke(inMat(i)(j).U)
           }
         }
 
@@ -73,14 +73,14 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         c.clock.step(1)
 
         for (i <- 0 until vecDim) {
-          c.io.out(i).expect(res(i).asSInt())
+          c.io.out(i).expect(res(i).asUInt())
         }
       }
     }
   }
 
   it should "should compute square matrix matrix product" in {
-    test(new MatrixMatrixProduct(N, N, N, bitWidth)) { c =>
+    test(new MatrixMatrixProduct(UInt(bitWidth.W), N, N, N)) { c =>
       for (_ <- 0 until repeats) {
         // generate data based on bits
         val AGen = new RandomVector(N, bitWidth)
@@ -99,8 +99,8 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 
         for (i <- 0 until N) {
           for (j <- 0 until N) {
-            c.io.A.data(i)(j).poke(inA(i)(j).S)
-            c.io.B.data(i)(j).poke(inB(i)(j).S)
+            c.io.A.data(i)(j).poke(inA(i)(j).U)
+            c.io.B.data(i)(j).poke(inB(i)(j).U)
           }
         }
 
@@ -110,7 +110,7 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 
         for (i <- 0 until N) {
           for (j <- 0 until N) {
-            c.io.out.data(i)(j).expect(res(i)(j).S)
+            c.io.out.data(i)(j).expect(res(i)(j).U)
             //                        print(s"${c.io.out.data(i)(j).peek().litValue()}, ")
           }
           println()
@@ -120,7 +120,7 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   }
 
   it should "should compute non-square matrix vector product" in {
-    test(new MatrixVectorProduct(M, R, bitWidth)) { c =>
+    test(new MatrixVectorProduct(UInt(bitWidth.W), M, R)) { c =>
       for (_ <- 0 until repeats) {
         // generate data based on bits
         val vecGen = new RandomVector(R, bitWidth)
@@ -137,26 +137,26 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 
         for (i <- 0 until M) {
           for (j <- 0 until R) {
-            c.io.mat.data(i)(j).poke(inMat(i)(j).S)
+            c.io.mat.data(i)(j).poke(inMat(i)(j).U)
           }
         }
 
         for (i <- 0 until R) {
-          c.io.vec(i).poke(inVec(i).S)
+          c.io.vec(i).poke(inVec(i).U)
         }
 
         c.clock.step(1)
         c.clock.step(1)
 
         for (i <- 0 until R) {
-          c.io.out(i).expect(res(i).asSInt())
+          c.io.out(i).expect(res(i).asUInt())
         }
       }
     }
   }
 
   it should "should compute non-square matrix matrix product" in {
-    test(new MatrixMatrixProduct(N, M, R, bitWidth)) { c =>
+    test(new MatrixMatrixProduct(UInt(bitWidth.W), N, M, R)) { c =>
       for (_ <- 0 until repeats) {
         // generate data based on bits
         val AGen = new RandomVector(M, bitWidth)
@@ -175,13 +175,13 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 
         for (i <- 0 until N) {
           for (j <- 0 until M) {
-            c.io.A.data(i)(j).poke(inA(i)(j).S)
+            c.io.A.data(i)(j).poke(inA(i)(j).U)
           }
         }
 
         for (i <- 0 until M) {
           for (j <- 0 until R) {
-            c.io.B.data(i)(j).poke(inB(i)(j).S)
+            c.io.B.data(i)(j).poke(inB(i)(j).U)
           }
         }
 
@@ -191,7 +191,7 @@ class MatrixMultSpec extends FlatSpec with ChiselScalatestTester with Matchers {
 
         for (i <- 0 until N) {
           for (j <- 0 until R) {
-            c.io.out.data(i)(j).expect(res(i)(j).S)
+            c.io.out.data(i)(j).expect(res(i)(j).U)
             //                        print(s"${c.io.out.data(i)(j).peek().litValue()}, ")
           }
           //                    println()
@@ -216,7 +216,7 @@ class FrobeniusInnerProductSpec extends FlatSpec with ChiselScalatestTester with
     vec1.zip(vec2).map { case (a, b) => a * b }.sum
 
   it should "should compute frob product" in {
-    test(new FrobeniusInnerProduct(elements, elements, bitWidth)) { c =>
+    test(new FrobeniusInnerProduct(UInt(bitWidth.W), elements, elements)) { c =>
       for (_ <- 0 until repeats) {
         val mat1 =
           List.fill(elements)(List.fill(elements)(rand.nextInt(20) + 1))
@@ -226,15 +226,15 @@ class FrobeniusInnerProductSpec extends FlatSpec with ChiselScalatestTester with
 
         mat1.zip(mat2).zipWithIndex.foreach { case ((vec1, vec2), i) =>
           vec1.zip(vec2).zipWithIndex.foreach { case ((a, b), j) =>
-            c.io.A.data(i)(j).poke(a.S)
-            c.io.B.data(i)(j).poke(b.S)
+            c.io.A.data(i)(j).poke(a.U)
+            c.io.B.data(i)(j).poke(b.U)
           }
         }
         c.clock.step(1)
         c.clock.step(1)
         c.clock.step(1)
         c.clock.step(1)
-        c.io.y.expect(frobProd.S)
+        c.io.y.expect(frobProd.U)
       }
     }
   }

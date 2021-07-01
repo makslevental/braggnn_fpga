@@ -1,0 +1,2 @@
+read -sv Conv_synth.v
+stat -top Conv -tech xilinx

@@ -1,0 +1,4 @@
+read -sv Conv.v
+hierarchy -top Conv
+proc; opt; techmap; opt
+write_verilog Conv_synth.v
