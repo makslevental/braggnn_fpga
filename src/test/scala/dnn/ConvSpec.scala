@@ -28,10 +28,10 @@ class ConvSpec extends FlatSpec with ChiselScalatestTester with Matchers {
   printArray(kernel)
 //  printArray(conv(Array(testImg), Array(Array(kernel))))
 
-  breezeConv(
-    testImg,
-    kernel
-  )
+//  breezeConv(
+//    testImg,
+//    kernel
+//  )
 
   it should "slide" in {
     test(new Conv(UInt(dWidth.W), cols, kernel)).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
@@ -44,10 +44,10 @@ class ConvSpec extends FlatSpec with ChiselScalatestTester with Matchers {
         c.io.inData.valid.poke(false.B)
 
         for (_ <- 0 until cols) {
-//          print(f"${c.io.outData.peek().litValue()}%8s")
+          print(f"${c.io.outData.peek().litValue()}%8s")
           c.clock.step()
         }
-//        println
+        println
       }
     }
   }
